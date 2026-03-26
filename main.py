@@ -9,7 +9,7 @@ from scenarios.loan import LoanScenario
 
 app = FastAPI()
 
-# Настройка CORS
+# Настройка CORS - разрешаем все источники
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,7 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Хранилище сессий: ключ = f"{session_id}:{scenario_type}"
 sessions = {}
+
+# Словарь шаблонов для каждого типа сценария
+template_map = {
+    "receipt_simple": "templates/receipt_simple.txt",
+    "receipt_advanced": "templates/receipt_advanced.txt",
+    "loan": "templates/loan.txt"
+}
 
 class AgentResponse(BaseModel):
     is_complete: bool = False
@@ -26,16 +34,17 @@ class AgentResponse(BaseModel):
     document: Optional[str] = None
     session_id: str
     current_step: Optional[str] = None
-    error: Optional[str] = None
 
 class ScenarioRequest(BaseModel):
     session_id: str
     answer: str = ""
 
 def _make_key(session_id: str, scenario_type: str) -> str:
+    """Создаёт составной ключ для хранения сценария."""
     return f"{session_id}:{scenario_type}"
 
 def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt_simple"):
+    """Получает или создаёт сценарий по типу."""
     # Если session_id не передан, создаём новый
     if session_id is None or session_id == "":
         session_id = str(uuid.uuid4())
@@ -48,8 +57,8 @@ def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt
         elif scenario_type == "loan":
             sessions[key] = LoanScenario()
         elif scenario_type == "claim_simple":
-            # Заглушка для claim_simple
-            sessions[key] = None  # None означает "не реализовано"
+            # Заглушка для claim_simple - возвращаем None
+            sessions[key] = None
         else:
             sessions[key] = ReceiptSimpleScenario()
     
@@ -64,23 +73,25 @@ def is_error_response(text: str) -> bool:
 
 @app.post("/api/scenario/{scenario_type}", response_model=AgentResponse)
 def handle_scenario(request: ScenarioRequest, scenario_type: str):
+    """Универсальный эндпоинт для всех типов сценариев."""
     # Проверяем, поддерживается ли тип
     if scenario_type == "claim_simple":
-        raise HTTPException(status_code=501, detail="Сценарий в разработке")
-    
-    # Выбираем шаблон в зависимости от типа сценария
-    template_map = {
-        "receipt_simple": "templates/receipt_simple.txt",
-        "receipt_advanced": "templates/receipt_advanced.txt",
-        "loan": "templates/loan.txt"
-    }
+        return AgentResponse(
+            session_id=request.session_id or str(uuid.uuid4()),
+            error="Сценарий в разработке",
+            current_step="unavailable"
+        )
     
     # Получаем или создаём сценарий
     scenario, session_id = get_or_create_scenario(request.session_id, scenario_type)
     
     # Проверяем, реализован ли сценарий
     if scenario is None:
-        raise HTTPException(status_code=501, detail="Сценарий в разработке")
+        return AgentResponse(
+            session_id=session_id,
+            error="Сценарий в разработке",
+            current_step="unavailable"
+        )
     
     template_path = template_map.get(scenario_type, "templates/receipt_simple.txt")
     
@@ -137,6 +148,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
 
 @app.post("/api/session/{session_id}/reset")
 def reset_session(session_id: str):
+    """Сбрасывает все сценарии для данного session_id."""
     # Удаляем все сессии для данного session_id (все типы)
     keys_to_delete = [key for key in sessions if key.startswith(f"{session_id}:")]
     for key in keys_to_delete:
@@ -146,7 +158,7 @@ def reset_session(session_id: str):
 
 @app.get("/api/session/{session_id}/status")
 def session_status(session_id: str):
-    # Возвращаем информацию обо всех сценариях для данного session_id
+    """Возвращает статус всех сценариев для данного session_id."""
     result = {"session_id": session_id, "scenarios": {}}
     
     for key, scenario in sessions.items():
@@ -165,6 +177,15 @@ def session_status(session_id: str):
         return {"status": "not_found", "session_id": session_id}
     
     return result
+
+# Обратная совместимость - старые эндпоинты
+@app.post("/api/scenario/receipt_simple", response_model=AgentResponse)
+def receipt_simple(request: ScenarioRequest):
+    return handle_scenario(request, "receipt_simple")
+
+@app.post("/api/scenario/receipt_advanced", response_model=AgentResponse)
+def receipt_advanced(request: ScenarioRequest):
+    return handle_scenario(request, "receipt_advanced")
 
 if __name__ == "__main__":
     import uvicorn
