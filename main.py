@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -26,29 +26,47 @@ class AgentResponse(BaseModel):
     document: Optional[str] = None
     session_id: str
     current_step: Optional[str] = None
+    error: Optional[str] = None
 
 class ScenarioRequest(BaseModel):
     session_id: str
     answer: str = ""
+
+def _make_key(session_id: str, scenario_type: str) -> str:
+    return f"{session_id}:{scenario_type}"
 
 def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt_simple"):
     # Если session_id не передан, создаём новый
     if session_id is None or session_id == "":
         session_id = str(uuid.uuid4())
     
-    if session_id not in sessions:
+    key = _make_key(session_id, scenario_type)
+    
+    if key not in sessions:
         if scenario_type == "receipt_advanced":
-            sessions[session_id] = ReceiptAdvancedScenario()
+            sessions[key] = ReceiptAdvancedScenario()
         elif scenario_type == "loan":
-            sessions[session_id] = LoanScenario()
+            sessions[key] = LoanScenario()
+        elif scenario_type == "claim_simple":
+            # Заглушка для claim_simple
+            sessions[key] = None  # None означает "не реализовано"
         else:
-            sessions[session_id] = ReceiptSimpleScenario()
-    return sessions[session_id], session_id
+            sessions[key] = ReceiptSimpleScenario()
+    
+    return sessions[key], session_id
+
+def is_error_response(text: str) -> bool:
+    """Проверяет, является ли текст сообщением об ошибке валидации."""
+    if not text:
+        return False
+    error_prefixes = ("не может быть", "Пожалуйста, введите", "Ошибка")
+    return text.startswith(error_prefixes)
 
 @app.post("/api/scenario/{scenario_type}", response_model=AgentResponse)
 def handle_scenario(request: ScenarioRequest, scenario_type: str):
-    # Получаем или создаём сценарий
-    scenario, session_id = get_or_create_scenario(request.session_id, scenario_type)
+    # Проверяем, поддерживается ли тип
+    if scenario_type == "claim_simple":
+        raise HTTPException(status_code=501, detail="Сценарий в разработке")
     
     # Выбираем шаблон в зависимости от типа сценария
     template_map = {
@@ -56,22 +74,29 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         "receipt_advanced": "templates/receipt_advanced.txt",
         "loan": "templates/loan.txt"
     }
+    
+    # Получаем или создаём сценарий
+    scenario, session_id = get_or_create_scenario(request.session_id, scenario_type)
+    
+    # Проверяем, реализован ли сценарий
+    if scenario is None:
+        raise HTTPException(status_code=501, detail="Сценарий в разработке")
+    
     template_path = template_map.get(scenario_type, "templates/receipt_simple.txt")
     
     # Если есть ответ - обрабатываем его
     if request.answer and request.answer != "":
         result = scenario.process_answer(request.answer)
         
-        # Если вернулась ошибка (проверяем по специфичным фразам в начале строки)
-        error_prefixes = ("не может быть", "Пожалуйста, введите")
-        if result and result.startswith(error_prefixes):
+        # Если вернулась ошибка валидации - возвращаем её как вопрос
+        if result and is_error_response(result):
             return AgentResponse(
                 question=result,
                 session_id=session_id,
                 current_step=scenario.get_current_step()
             )
         
-        # Если есть result (следующий вопрос) - возвращаем его напрямую
+        # Если есть result (следующий вопрос) - возвращаем его
         if result:
             return AgentResponse(
                 question=result,
@@ -79,7 +104,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
                 current_step=scenario.get_current_step()
             )
         
-        # Проверяем завершен ли сценарий
+        # Если result None - проверяем завершён ли сценарий
         if scenario.is_complete():
             document = scenario.generate_document(template_path)
             return AgentResponse(
@@ -98,7 +123,6 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         )
     
     # Первый вызов без ответа - инициализируем сценарий
-    # Вызываем process_answer("") для перехода из START в первый вопрос
     if scenario.get_current_step() == "start":
         scenario.process_answer("")
     
@@ -113,23 +137,34 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
 
 @app.post("/api/session/{session_id}/reset")
 def reset_session(session_id: str):
-    if session_id in sessions:
-        sessions[session_id].reset()
-    return {"status": "ok", "session_id": session_id}
-
-# Удаляем старые endpoints (теперь всё работает через универсальный)
+    # Удаляем все сессии для данного session_id (все типы)
+    keys_to_delete = [key for key in sessions if key.startswith(f"{session_id}:")]
+    for key in keys_to_delete:
+        del sessions[key]
+    
+    return {"status": "ok", "session_id": session_id, "deleted": len(keys_to_delete)}
 
 @app.get("/api/session/{session_id}/status")
 def session_status(session_id: str):
-    if session_id not in sessions:
+    # Возвращаем информацию обо всех сценариях для данного session_id
+    result = {"session_id": session_id, "scenarios": {}}
+    
+    for key, scenario in sessions.items():
+        if key.startswith(f"{session_id}:"):
+            scenario_type = key.split(":")[1]
+            if scenario is not None:
+                result["scenarios"][scenario_type] = {
+                    "current_step": scenario.get_current_step(),
+                    "is_complete": scenario.is_complete(),
+                    "data": scenario.data
+                }
+            else:
+                result["scenarios"][scenario_type] = {"error": "not_implemented"}
+    
+    if not result["scenarios"]:
         return {"status": "not_found", "session_id": session_id}
-    scenario = sessions[session_id]
-    return {
-        "session_id": session_id,
-        "current_step": scenario.get_current_step(),
-        "is_complete": scenario.is_complete(),
-        "data": scenario.data
-    }
+    
+    return result
 
 if __name__ == "__main__":
     import uvicorn
