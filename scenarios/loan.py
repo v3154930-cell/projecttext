@@ -157,9 +157,12 @@ class LoanScenario:
         
         context = self.data.copy()
         context['has_interest_rate'] = 'interest_rate' in context
+        context['has_repayment_method'] = 'repayment_method' in context
         context['has_purpose'] = 'purpose' in context
         context['has_penalty'] = 'penalty' in context
         context['has_collateral'] = 'collateral' in context
+        context.setdefault('days', '3')
+        context.setdefault('notice_days', '30')
         
         import re
         def replace_conditional(match):
@@ -172,10 +175,9 @@ class LoanScenario:
         pattern = r'{{#if (has_\w+)}}(.*?){{/if}}'
         document = re.sub(pattern, replace_conditional, template, flags=re.DOTALL)
         
-        try:
-            document = document.format(**self.data)
-        except KeyError as e:
-            raise ValueError(f"Отсутствует необходимое поле для шаблона: {e}")
+        # Replace [field] placeholders with data values
+        for key, value in context.items():
+            document = document.replace(f'[{key}]', str(value))
         
         return document
     

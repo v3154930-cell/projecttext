@@ -32,6 +32,7 @@ class AgentResponse(BaseModel):
     is_complete: bool = False
     question: Optional[str] = None
     document: Optional[str] = None
+    error: Optional[str] = None
     session_id: str
     current_step: Optional[str] = None
 
@@ -97,25 +98,9 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     
     # Если есть ответ - обрабатываем его
     if request.answer and request.answer != "":
-        result = scenario.process_answer(request.answer)
+        scenario.process_answer(request.answer)
         
-        # Если вернулась ошибка валидации - возвращаем её как вопрос
-        if result and is_error_response(result):
-            return AgentResponse(
-                question=result,
-                session_id=session_id,
-                current_step=scenario.get_current_step()
-            )
-        
-        # Если есть result (следующий вопрос) - возвращаем его
-        if result:
-            return AgentResponse(
-                question=result,
-                session_id=session_id,
-                current_step=scenario.get_current_step()
-            )
-        
-        # Если result None - проверяем завершён ли сценарий
+        # Сразу проверяем завершение
         if scenario.is_complete():
             document = scenario.generate_document(template_path)
             return AgentResponse(
@@ -125,7 +110,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
                 current_step="done"
             )
         
-        # Fallback - получаем следующий вопрос
+        # Если не завершён, получаем следующий вопрос
         next_question = scenario.get_next_question()
         return AgentResponse(
             question=next_question,
