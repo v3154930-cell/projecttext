@@ -1,11 +1,22 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import uuid
 from scenarios.receipt_simple import ReceiptSimpleScenario
 from scenarios.receipt_advanced import ReceiptAdvancedScenario
 from scenarios.loan import LoanScenario
 
 app = FastAPI()
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 sessions = {}
 
@@ -20,7 +31,11 @@ class ScenarioRequest(BaseModel):
     session_id: str
     answer: str = ""
 
-def get_or_create_scenario(session_id: str, scenario_type: str = "receipt_simple"):
+def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt_simple"):
+    # Если session_id не передан, создаём новый
+    if session_id is None or session_id == "":
+        session_id = str(uuid.uuid4())
+    
     if session_id not in sessions:
         if scenario_type == "receipt_advanced":
             sessions[session_id] = ReceiptAdvancedScenario()
@@ -28,11 +43,12 @@ def get_or_create_scenario(session_id: str, scenario_type: str = "receipt_simple
             sessions[session_id] = LoanScenario()
         else:
             sessions[session_id] = ReceiptSimpleScenario()
-    return sessions[session_id]
+    return sessions[session_id], session_id
 
 @app.post("/api/scenario/{scenario_type}", response_model=AgentResponse)
 def handle_scenario(request: ScenarioRequest, scenario_type: str):
-    scenario = get_or_create_scenario(request.session_id, scenario_type)
+    # Получаем или создаём сценарий
+    scenario, session_id = get_or_create_scenario(request.session_id, scenario_type)
     
     # Выбираем шаблон в зависимости от типа сценария
     template_map = {
@@ -51,7 +67,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         if result and result.startswith(error_prefixes):
             return AgentResponse(
                 question=result,
-                session_id=request.session_id,
+                session_id=session_id,
                 current_step=scenario.get_current_step()
             )
         
@@ -59,7 +75,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         if result:
             return AgentResponse(
                 question=result,
-                session_id=request.session_id,
+                session_id=session_id,
                 current_step=scenario.get_current_step()
             )
         
@@ -69,7 +85,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
             return AgentResponse(
                 is_complete=True,
                 document=document,
-                session_id=request.session_id,
+                session_id=session_id,
                 current_step="done"
             )
         
@@ -77,7 +93,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         next_question = scenario.get_next_question()
         return AgentResponse(
             question=next_question,
-            session_id=request.session_id,
+            session_id=session_id,
             current_step=scenario.get_current_step()
         )
     
@@ -91,24 +107,17 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     
     return AgentResponse(
         question=question,
-        session_id=request.session_id,
+        session_id=session_id,
         current_step=scenario.get_current_step()
     )
 
-@app.get("/api/scenario/{scenario_type}/reset")
-def reset_session(scenario_type: str, session_id: str):
+@app.post("/api/session/{session_id}/reset")
+def reset_session(session_id: str):
     if session_id in sessions:
         sessions[session_id].reset()
-    return {"status": "ok", "session_id": session_id, "scenario_type": scenario_type}
+    return {"status": "ok", "session_id": session_id}
 
-# Обратная совместимость - старые endpoints
-@app.post("/api/scenario/receipt_simple", response_model=AgentResponse)
-def receipt_simple(request: ScenarioRequest):
-    return handle_scenario(request, "receipt_simple")
-
-@app.post("/api/scenario/receipt_advanced", response_model=AgentResponse)
-def receipt_advanced(request: ScenarioRequest):
-    return handle_scenario(request, "receipt_advanced")
+# Удаляем старые endpoints (теперь всё работает через универсальный)
 
 @app.get("/api/session/{session_id}/status")
 def session_status(session_id: str):
