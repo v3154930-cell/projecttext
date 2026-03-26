@@ -23,10 +23,12 @@ class ReceiptSimpleScenario:
     
     def get_next_question(self) -> Optional[str]:
         if self.state == Step.START:
-            return "Введите ФИО получателя (того, кто берет деньги):"
+            return None
         elif self.state == Step.ASK_RECEIVER_FIO:
-            return "Введите паспортные данные получателя (серия, номер, кем и когда выдан):"
+            return "Введите ФИО получателя (того, кто берет деньги):"
         elif self.state == Step.ASK_PASSPORT:
+            return "Введите паспортные данные получателя (серия, номер, кем и когда выдан):"
+        elif self.state == Step.ASK_SENDER_FIO:
             return "Введите ФИО передающего (того, кто дает деньги):"
         elif self.state == Step.ASK_SENDER_FIO:
             return "Введите сумму в рублях (только цифры):"
