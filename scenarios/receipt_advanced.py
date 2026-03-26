@@ -63,7 +63,6 @@ class ReceiptAdvancedScenario:
             self.state = Step.ASK_RECEIVER_FIO
             return self.get_next_question()
         
-        # Основные шаги
         if self.state == Step.ASK_RECEIVER_FIO:
             if not answer:
                 return "ФИО не может быть пустым. Введите ФИО получателя:"
@@ -117,7 +116,6 @@ class ReceiptAdvancedScenario:
             self.state = Step.ASK_INTEREST_RATE
             return self.get_next_question()
         
-        # Опциональные шаги
         if self.state == Step.ASK_INTEREST_RATE:
             if not self.is_skip(answer):
                 self.data['interest_rate'] = answer
@@ -152,14 +150,12 @@ class ReceiptAdvancedScenario:
         with open(template_path, 'r', encoding='utf-8') as f:
             template = f.read()
         
-        # Подготовка данных для условных блоков
         context = self.data.copy()
         context['has_interest_rate'] = 'interest_rate' in context
         context['has_interest_period'] = 'interest_period' in context
         context['has_penalty'] = 'penalty' in context
         context['has_repayment_order'] = 'repayment_order' in context
         
-        # Простая замена условных блоков
         import re
         def replace_conditional(match):
             field = match.group(1)
@@ -171,7 +167,6 @@ class ReceiptAdvancedScenario:
         pattern = r'{{#if (has_\w+)}}(.*?){{/if}}'
         document = re.sub(pattern, replace_conditional, template, flags=re.DOTALL)
         
-        # Стандартная подстановка
         try:
             document = document.format(**self.data)
         except KeyError as e:

@@ -69,9 +69,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         )
     
     # Первый вызов без ответа - инициализируем сценарий
-    # Вызываем process_answer с пустым ответом чтобы перейти от START к первому вопросу
-    if scenario.get_current_step() == "start":
-        scenario.process_answer("")
+    # Не вызываем process_answer(""), чтобы получить вопрос для START
+    # get_next_question() для START уже возвращает правильный первый вопрос
     
     # Получаем первый вопрос
     question = scenario.get_next_question()
