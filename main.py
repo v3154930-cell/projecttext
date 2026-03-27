@@ -35,6 +35,7 @@ class AgentResponse(BaseModel):
     error: Optional[str] = None
     session_id: str
     current_step: Optional[str] = None
+    optional: bool = False
 
 class ScenarioRequest(BaseModel):
     session_id: str
@@ -115,7 +116,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         return AgentResponse(
             question=next_question,
             session_id=session_id,
-            current_step=scenario.get_current_step()
+            current_step=scenario.get_current_step(),
+            optional=getattr(scenario, 'is_current_optional', lambda: False)()
         )
     
     # Первый вызов без ответа - инициализируем сценарий
@@ -128,7 +130,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     return AgentResponse(
         question=question,
         session_id=session_id,
-        current_step=scenario.get_current_step()
+        current_step=scenario.get_current_step(),
+        optional=getattr(scenario, 'is_current_optional', lambda: False)()
     )
 
 @app.post("/api/session/{session_id}/reset")

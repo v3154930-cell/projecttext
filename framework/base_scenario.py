@@ -29,9 +29,28 @@ class BaseScenario:
             return self._steps[self._current_index].question
         return None
 
+    def is_current_optional(self) -> bool:
+        if self._current_index < len(self._steps):
+            return self._steps[self._current_index].optional
+        return False
+
     @staticmethod
     def _is_skip(answer: str) -> bool:
         return answer.strip().lower() in ["пропустить", "skip", ""]
+
+    def _should_show_step(self, step: FieldStep) -> bool:
+        if step.depends_on is None:
+            return True
+        return step.depends_on in self.data
+
+    def _advance_to_next_step(self) -> Optional[str]:
+        self._current_index += 1
+        while self._current_index < len(self._steps):
+            if self._should_show_step(self._steps[self._current_index]):
+                return self._steps[self._current_index].question
+            self._current_index += 1
+        self._ready_to_generate = True
+        return None
 
     def process_answer(self, answer: str) -> Optional[str]:
         if self._ready_to_generate:
@@ -45,11 +64,7 @@ class BaseScenario:
         step = self._steps[self._current_index]
 
         if step.optional and self._is_skip(answer):
-            self._current_index += 1
-            if self._current_index >= len(self._steps):
-                self._ready_to_generate = True
-                return None
-            return self._steps[self._current_index].question
+            return self._advance_to_next_step()
 
         for validator in step.validators:
             error: Optional[str] = validator(answer)
@@ -60,13 +75,7 @@ class BaseScenario:
             value = step.post_process(answer) if step.post_process else answer
             self.data[step.data_key] = value
 
-        self._current_index += 1
-
-        if self._current_index >= len(self._steps):
-            self._ready_to_generate = True
-            return None
-
-        return self._steps[self._current_index].question
+        return self._advance_to_next_step()
 
     def generate_document(self, template_path: Optional[str] = None) -> str:
         if not self._ready_to_generate:
@@ -76,9 +85,11 @@ class BaseScenario:
         with open(path, 'r', encoding='utf-8') as f:
             template = f.read()
 
+        context = {f"has_{k}": True for k in self.data}
+
         def _replace_conditional(match: re.Match) -> str:
             field = match.group(1)
-            if self.data.get(field, False):
+            if context.get(field, False):
                 return match.group(2)
             return ''
 

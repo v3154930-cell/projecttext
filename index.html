@@ -234,6 +234,27 @@
             cursor: not-allowed;
         }
 
+        .btn-skip {
+            background: transparent;
+            color: var(--text-gray);
+            border: 1px solid #D0D5DD;
+            padding: 0 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-skip:hover {
+            border-color: var(--text-gray);
+            color: var(--text-dark);
+        }
+
+        .btn-skip.hidden {
+            display: none;
+        }
+
         .document-area {
             margin-top: 30px;
             background: #F8FAFE;
@@ -332,6 +353,7 @@
             <div id="questionArea" class="question-area">Вопрос будет здесь</div>
             <div class="answer-area">
                 <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ..." autocomplete="off">
+                <button id="skipBtn" class="btn-skip hidden">Пропустить</button>
                 <button id="sendBtn" class="btn-primary">Отправить</button>
             </div>
             <div id="documentArea" class="document-area" style="display: none;"></div>
@@ -355,6 +377,21 @@
         let isComplete = false;
         let isLoading = false;
 
+        // Перехват fetch для логирования
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            console.log('📤 Запрос:', args[0], JSON.parse(args[1]?.body || '{}'));
+            return originalFetch(...args).then(r => {
+                r.clone().json().then(data => {
+                    console.log('📥 Ответ:', data);
+                    console.log('   - is_complete:', data.is_complete);
+                    console.log('   - question:', data.question);
+                    console.log('   - current_step:', data.current_step);
+                }).catch(() => {});
+                return r;
+            });
+        };
+
         // Элементы DOM
         const selectorBlock = document.getElementById('selectorBlock');
         const scenarioPanel = document.getElementById('scenarioPanel');
@@ -362,6 +399,7 @@
         const questionArea = document.getElementById('questionArea');
         const answerInput = document.getElementById('answerInput');
         const sendBtn = document.getElementById('sendBtn');
+        const skipBtn = document.getElementById('skipBtn');
         const resetBtn = document.getElementById('resetBtn');
         const backBtn = document.getElementById('backBtn');
         const documentArea = document.getElementById('documentArea');
@@ -383,6 +421,7 @@
             documentArea.innerText = '';
             questionArea.innerText = '';
             stepInfo.innerText = '';
+            skipBtn.classList.add('hidden');
         }
 
         function showScenario(type, name) {
@@ -417,6 +456,11 @@
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | ${stepDisplay} | session: ${currentSessionId ?? '—'}`;
             isComplete = false;
             answerInput.focus();
+            if (fullResponse && fullResponse.optional) {
+                skipBtn.classList.remove('hidden');
+            } else {
+                skipBtn.classList.add('hidden');
+            }
             if (fullResponse) logToDebug(fullResponse);
         }
 
@@ -426,6 +470,7 @@
             questionArea.innerText = 'Документ сформирован. Нажмите "Назад" для выбора другого документа.';
             sendBtn.disabled = true;
             answerInput.disabled = true;
+            skipBtn.classList.add('hidden');
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | документ готов | session: ${currentSessionId ?? '—'}`;
             isComplete = true;
             if (fullResponse) logToDebug(fullResponse);
@@ -550,6 +595,45 @@
             }
         }
 
+        async function skipAnswer() {
+            if (isLoading || !currentSessionId || !currentScenarioType || isComplete) return;
+            isLoading = true;
+            sendBtn.disabled = true;
+            answerInput.disabled = true;
+            skipBtn.classList.add('hidden');
+            const originalButtonText = sendBtn.innerText;
+            sendBtn.innerText = '...';
+            questionArea.innerText = '⏳ Обработка...';
+
+            try {
+                const response = await fetch(`${API_BASE}/${currentScenarioType}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId, answer: 'пропустить' })
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.session_id && data.session_id !== currentSessionId) {
+                    currentSessionId = data.session_id;
+                }
+                if (data.error) handleError(data.error, data);
+                else if (data.is_complete) showDocument(data.document, data);
+                else showQuestion(data.question, data.current_step, data);
+                answerInput.value = '';
+            } catch (err) {
+                console.error(err);
+                handleError(err.message);
+            } finally {
+                isLoading = false;
+                sendBtn.disabled = false;
+                answerInput.disabled = false;
+                sendBtn.innerText = originalButtonText;
+                answerInput.focus();
+            }
+        }
+
         // Обработчики
         document.querySelectorAll('.card-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -561,6 +645,7 @@
 
         backBtn.addEventListener('click', showSelector);
         sendBtn.addEventListener('click', sendAnswer);
+        skipBtn.addEventListener('click', skipAnswer);
         resetBtn.addEventListener('click', resetSession);
         answerInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') sendAnswer();

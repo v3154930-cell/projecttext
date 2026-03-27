@@ -12,3 +12,4 @@ class FieldStep:
     validators: list[Callable[[str], Optional[str]]] = field(default_factory=list)
     post_process: Optional[Callable[[str], str]] = None
     optional: bool = False
+    depends_on: Optional[str] = None
