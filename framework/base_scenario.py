@@ -95,10 +95,10 @@ class BaseScenario:
         def _replace_conditional(match: re.Match) -> str:
             field = match.group(1)
             if context.get(field, False):
-                return match.group(2)
+                return '\n' + match.group(2) + '\n'
             return ''
 
-        pattern = r'{{#if (has_\w+)}}(.*?){{/if}}'
+        pattern = r'\n{{#if (has_\w+)}}(.*?){{/if}}\n'
         document = re.sub(pattern, _replace_conditional, template, flags=re.DOTALL)
 
         document = re.sub(r'\n{3,}', '\n\n', document)

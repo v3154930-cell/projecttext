@@ -655,15 +655,17 @@
 
         answerInput.addEventListener('input', () => {
             if (currentFieldType !== 'date') return;
-            let digits = answerInput.value.replace(/\D/g, '').slice(0, 8);
-            let formatted = '';
-            if (digits.length > 4) {
-                formatted = digits.slice(0, 2) + '.' + digits.slice(2, 4) + '.' + digits.slice(4);
-            } else if (digits.length > 2) {
-                formatted = digits.slice(0, 2) + '.' + digits.slice(2);
-            } else {
-                formatted = digits;
+            let digits = answerInput.value.replace(/\D/g, '');
+            let d = digits.slice(0, 2);
+            let m = digits.slice(2, 4);
+            let y = digits.slice(4);
+            if (y.length > 4) y = y.slice(0, 4);
+            if (y.length > 0 && y.length !== 2 && y.length !== 4) {
+                y = y.slice(0, 2);
             }
+            let formatted = d;
+            if (m) formatted += '.' + m;
+            if (y) formatted += '.' + y;
             answerInput.value = formatted;
         });
 
