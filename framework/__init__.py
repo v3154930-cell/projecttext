@@ -7,6 +7,7 @@ from framework.validators import (
     validate_money,
     validate_passport,
     validate_plain_text,
+    is_skip,
     format_money,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "validate_money",
     "validate_passport",
     "validate_plain_text",
+    "is_skip",
     "format_money",
 ]

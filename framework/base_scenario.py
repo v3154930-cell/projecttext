@@ -1,3 +1,4 @@
+import re
 from typing import Optional, Callable
 from framework.step import FieldStep
 
@@ -28,6 +29,10 @@ class BaseScenario:
             return self._steps[self._current_index].question
         return None
 
+    @staticmethod
+    def _is_skip(answer: str) -> bool:
+        return answer.strip().lower() in ["пропустить", "skip", ""]
+
     def process_answer(self, answer: str) -> Optional[str]:
         if self._ready_to_generate:
             return None
@@ -38,6 +43,13 @@ class BaseScenario:
             return None
 
         step = self._steps[self._current_index]
+
+        if step.optional and self._is_skip(answer):
+            self._current_index += 1
+            if self._current_index >= len(self._steps):
+                self._ready_to_generate = True
+                return None
+            return self._steps[self._current_index].question
 
         for validator in step.validators:
             error: Optional[str] = validator(answer)
@@ -64,5 +76,18 @@ class BaseScenario:
         with open(path, 'r', encoding='utf-8') as f:
             template = f.read()
 
-        document = template.format(**self.data)
+        def _replace_conditional(match: re.Match) -> str:
+            field = match.group(1)
+            if self.data.get(field, False):
+                return match.group(2)
+            return ''
+
+        pattern = r'{{#if (has_\w+)}}(.*?){{/if}}'
+        document = re.sub(pattern, _replace_conditional, template, flags=re.DOTALL)
+
+        try:
+            document = document.format(**self.data)
+        except KeyError as e:
+            raise ValueError(f"Отсутствует необходимое поле для шаблона: {e}")
+
         return document

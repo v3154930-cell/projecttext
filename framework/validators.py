@@ -41,6 +41,10 @@ def validate_plain_text(answer: str) -> str | None:
     return None
 
 
+def is_skip(answer: str) -> bool:
+    return answer.strip().lower() in ["пропустить", "skip", ""]
+
+
 def format_money(answer: str) -> str:
     amount = int(float(answer.replace(',', '.')))
     return f"{amount:,}".replace(',', ' ')
