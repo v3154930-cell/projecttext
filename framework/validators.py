@@ -1,5 +1,6 @@
 import re
 from datetime import date as date_type
+from typing import Callable
 
 
 def required(answer: str, field_label: str = "Поле") -> str | None:
@@ -100,3 +101,25 @@ def normalize_date(answer: str) -> str:
     except ValueError:
         return answer
     return f"{day:02d}.{month:02d}.{year}"
+
+
+def _parse_ddmmyyyy(s: str):
+    m = re.match(r'^(\d{2})\.(\d{2})\.(\d{4})$', s.strip())
+    if m:
+        return int(m.group(3)), int(m.group(2)), int(m.group(1))
+    return None
+
+
+def validate_date_after(earlier_key: str, field_label: str = "Дата") -> Callable:
+    def _check(answer: str, data: dict) -> str | None:
+        earlier = data.get(earlier_key)
+        if not earlier:
+            return None
+        a = _parse_ddmmyyyy(answer)
+        b = _parse_ddmmyyyy(earlier)
+        if a and b:
+            from datetime import date as _d
+            if _d(*a) < _d(*b):
+                return f"{field_label} не может быть раньше {earlier_key}:"
+        return None
+    return _check

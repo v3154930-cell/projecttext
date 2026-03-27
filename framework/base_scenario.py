@@ -80,6 +80,11 @@ class BaseScenario:
             value = step.post_process(answer) if step.post_process else answer
             self.data[step.data_key] = value
 
+        for cv in step.cross_validators:
+            error = cv(answer, self.data)
+            if error:
+                return error
+
         return self._advance_to_next_step()
 
     def generate_document(self, template_path: Optional[str] = None) -> str:

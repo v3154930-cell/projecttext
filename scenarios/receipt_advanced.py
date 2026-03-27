@@ -1,4 +1,4 @@
-from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date
+from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after
 
 STEPS = [
     FieldStep(
@@ -35,20 +35,21 @@ STEPS = [
         post_process=format_money,
     ),
     FieldStep(
-        name="ask_return_date",
-        question="Введите срок возврата (например: 25.12.2026):",
-        data_key="return_date",
-        field_type=FieldType.DATE,
-        validators=[validate_date],
-        post_process=normalize_date,
-    ),
-    FieldStep(
         name="ask_date",
         question="Введите дату составления расписки (ДД.ММ.ГГГГ):",
         data_key="date",
         field_type=FieldType.DATE,
         validators=[validate_date],
         post_process=normalize_date,
+    ),
+    FieldStep(
+        name="ask_return_date",
+        question="Введите срок возврата (например: 25.12.2026):",
+        data_key="return_date",
+        field_type=FieldType.DATE,
+        validators=[validate_date],
+        post_process=normalize_date,
+        cross_validators=[validate_date_after("date", "Срок возврата")],
     ),
     FieldStep(
         name="ask_city",

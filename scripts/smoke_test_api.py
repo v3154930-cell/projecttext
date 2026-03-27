@@ -166,8 +166,8 @@ try:
         ("4510 123456, UVD g. Moskvy, 01.01.2020", "passport"),
         ("Petrov Petr Petrovich", "sender FIO"),
         ("100000", "amount"),
-        ("25.12.2026", "return_date"),
         ("01.01.2025", "date"),
+        ("25.12.2026", "return_date"),
         ("Moskva", "city"),
     ]
     try:
@@ -195,8 +195,8 @@ try:
         ("4510 123456, UVD g. Moskvy, 01.01.2020", "passport"),
         ("Petrov Petr Petrovich", "sender FIO"),
         ("50000", "amount"),
-        ("25.12.2026", "return_date"),
         ("01.01.2025", "date"),
+        ("25.12.2026", "return_date"),
         ("Moskva", "city"),
         ("10% godovyh", "interest_rate"),
         ("s dnya polucheniya do dnya vozvrata", "interest_period"),
