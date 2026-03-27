@@ -378,20 +378,22 @@
         let isLoading = false;
         let currentFieldType = null;
 
-        // Перехват fetch для логирования
+        // Перехват fetch для логирования (только в debug-режиме)
         const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-            console.log('📤 Запрос:', args[0], JSON.parse(args[1]?.body || '{}'));
-            return originalFetch(...args).then(r => {
-                r.clone().json().then(data => {
-                    console.log('📥 Ответ:', data);
-                    console.log('   - is_complete:', data.is_complete);
-                    console.log('   - question:', data.question);
-                    console.log('   - current_step:', data.current_step);
-                }).catch(() => {});
-                return r;
-            });
-        };
+        if (DEBUG) {
+            window.fetch = function(...args) {
+                console.log('\u{1F4E4} \u0417\u0430\u043F\u0440\u043E\u0441:', args[0], JSON.parse(args[1]?.body || '{}'));
+                return originalFetch(...args).then(r => {
+                    r.clone().json().then(data => {
+                        console.log('\u{1F4E5} \u041E\u0442\u0432\u0435\u0442:', data);
+                        console.log('   - is_complete:', data.is_complete);
+                        console.log('   - question:', data.question);
+                        console.log('   - current_step:', data.current_step);
+                    }).catch(() => {});
+                    return r;
+                });
+            };
+        }
 
         // Элементы DOM
         const selectorBlock = document.getElementById('selectorBlock');
