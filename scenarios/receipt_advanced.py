@@ -49,7 +49,7 @@ STEPS = [
         field_type=FieldType.DATE,
         validators=[validate_date],
         post_process=normalize_date,
-        cross_validators=[validate_date_after("date", "Срок возврата")],
+        cross_validators=[validate_date_after("date", "Дата возврата не может быть раньше даты составления расписки")],
     ),
     FieldStep(
         name="ask_city",

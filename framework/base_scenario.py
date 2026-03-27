@@ -81,7 +81,7 @@ class BaseScenario:
             self.data[step.data_key] = value
 
         for cv in step.cross_validators:
-            error = cv(answer, self.data)
+            error = cv(self.data[step.data_key] if step.data_key else answer, self.data)
             if error:
                 return error
 
