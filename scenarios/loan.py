@@ -1,4 +1,4 @@
-from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after
+from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent
 
 STEPS = [
     FieldStep(
@@ -50,6 +50,7 @@ STEPS = [
         data_key="interest_rate",
         field_type=FieldType.TEXT,
         optional=True,
+        post_process=normalize_percent,
     ),
     FieldStep(
         name="ask_repayment_method",
@@ -78,6 +79,7 @@ STEPS = [
         data_key="penalty",
         field_type=FieldType.TEXT,
         optional=True,
+        post_process=normalize_percent,
     ),
     FieldStep(
         name="ask_collateral",

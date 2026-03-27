@@ -76,6 +76,17 @@ def format_money(answer: str) -> str:
     return f"{amount:,}".replace(',', ' ')
 
 
+def normalize_percent(answer: str) -> str:
+    if '%' in answer:
+        return answer
+    cleaned = answer.strip().replace(',', '.')
+    try:
+        float(cleaned)
+        return answer.strip() + '%'
+    except ValueError:
+        return answer
+
+
 def normalize_date(answer: str) -> str:
     answer = answer.strip()
     parts = re.split(r'[.\s/\-]+', answer)

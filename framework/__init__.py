@@ -10,6 +10,7 @@ from framework.validators import (
     is_skip,
     format_money,
     normalize_date,
+    normalize_percent,
     validate_date_after,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "is_skip",
     "format_money",
     "normalize_date",
+    "normalize_percent",
     "validate_date_after",
 ]
