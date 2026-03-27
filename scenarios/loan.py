@@ -1,4 +1,4 @@
-from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent
+from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio
 
 STEPS = [
     FieldStep(
@@ -11,6 +11,7 @@ STEPS = [
         data_key="lender",
         field_type=FieldType.FIO,
         validators=[lambda a: required(a, "Займодавец")],
+        post_process=normalize_fio,
     ),
     FieldStep(
         name="ask_borrower",
@@ -18,6 +19,7 @@ STEPS = [
         data_key="borrower",
         field_type=FieldType.FIO,
         validators=[lambda a: required(a, "Заемщик")],
+        post_process=normalize_fio,
     ),
     FieldStep(
         name="ask_amount",

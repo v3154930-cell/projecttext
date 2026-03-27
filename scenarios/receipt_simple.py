@@ -1,4 +1,4 @@
-from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after
+from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_fio, normalize_passport
 
 STEPS = [
     FieldStep(
@@ -11,6 +11,7 @@ STEPS = [
         data_key="fio_receiver",
         field_type=FieldType.FIO,
         validators=[lambda a: required(a, "ФИО")],
+        post_process=normalize_fio,
     ),
     FieldStep(
         name="ask_passport",
@@ -18,6 +19,7 @@ STEPS = [
         data_key="passport",
         field_type=FieldType.PASSPORT,
         validators=[validate_passport],
+        post_process=normalize_passport,
     ),
     FieldStep(
         name="ask_sender_fio",
@@ -25,6 +27,7 @@ STEPS = [
         data_key="fio_sender",
         field_type=FieldType.FIO,
         validators=[lambda a: required(a, "ФИО передающего")],
+        post_process=normalize_fio,
     ),
     FieldStep(
         name="ask_amount",

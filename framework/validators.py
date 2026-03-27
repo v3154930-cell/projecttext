@@ -87,6 +87,14 @@ def normalize_percent(answer: str) -> str:
         return answer
 
 
+def normalize_fio(answer: str) -> str:
+    return answer.strip()
+
+
+def normalize_passport(answer: str) -> str:
+    return answer.strip()
+
+
 def normalize_date(answer: str) -> str:
     answer = answer.strip()
     parts = re.split(r'[.\s/\-]+', answer)

@@ -11,6 +11,8 @@ from framework.validators import (
     format_money,
     normalize_date,
     normalize_percent,
+    normalize_fio,
+    normalize_passport,
     validate_date_after,
 )
 
@@ -27,5 +29,7 @@ __all__ = [
     "format_money",
     "normalize_date",
     "normalize_percent",
+    "normalize_fio",
+    "normalize_passport",
     "validate_date_after",
 ]
