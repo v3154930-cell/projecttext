@@ -34,6 +34,11 @@ class BaseScenario:
             return self._steps[self._current_index].optional
         return False
 
+    def get_current_field_type(self) -> Optional[str]:
+        if self._current_index < len(self._steps):
+            return self._steps[self._current_index].field_type.value
+        return None
+
     @staticmethod
     def _is_skip(answer: str) -> bool:
         return answer.strip().lower() in ["пропустить", "skip", ""]
@@ -95,6 +100,8 @@ class BaseScenario:
 
         pattern = r'{{#if (has_\w+)}}(.*?){{/if}}'
         document = re.sub(pattern, _replace_conditional, template, flags=re.DOTALL)
+
+        document = re.sub(r'\n{3,}', '\n\n', document)
 
         try:
             document = document.format(**self.data)

@@ -376,6 +376,7 @@
         let currentScenarioName = '';
         let isComplete = false;
         let isLoading = false;
+        let currentFieldType = null;
 
         // Перехват fetch для логирования
         const originalFetch = window.fetch;
@@ -455,6 +456,7 @@
             const stepDisplay = step ? `Шаг: ${String(step)}` : '';
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | ${stepDisplay} | session: ${currentSessionId ?? '—'}`;
             isComplete = false;
+            currentFieldType = (fullResponse && fullResponse.field_type) || null;
             answerInput.focus();
             if (fullResponse && fullResponse.optional) {
                 skipBtn.classList.remove('hidden');
@@ -649,6 +651,32 @@
         resetBtn.addEventListener('click', resetSession);
         answerInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') sendAnswer();
+        });
+
+        answerInput.addEventListener('input', () => {
+            if (currentFieldType !== 'date') return;
+            let digits = answerInput.value.replace(/\D/g, '').slice(0, 8);
+            let formatted = '';
+            if (digits.length > 4) {
+                formatted = digits.slice(0, 2) + '.' + digits.slice(2, 4) + '.' + digits.slice(4);
+            } else if (digits.length > 2) {
+                formatted = digits.slice(0, 2) + '.' + digits.slice(2);
+            } else {
+                formatted = digits;
+            }
+            answerInput.value = formatted;
+        });
+
+        answerInput.addEventListener('keydown', (e) => {
+            if (currentFieldType === 'date' && e.key === 'Backspace') {
+                const val = answerInput.value;
+                const pos = answerInput.selectionStart;
+                if (pos > 0 && val[pos - 1] === '.') {
+                    e.preventDefault();
+                    answerInput.value = val.slice(0, pos - 2) + val.slice(pos);
+                    answerInput.selectionStart = answerInput.selectionEnd = pos - 2;
+                }
+            }
         });
 
         // Старт

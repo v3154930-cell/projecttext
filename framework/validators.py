@@ -9,13 +9,15 @@ def required(answer: str, field_label: str = "Поле") -> str | None:
 
 
 def validate_date(answer: str) -> str | None:
-    if not re.match(r'^\d{2}\.\d{2}\.\d{4}$', answer):
-        return "Введите дату в формате ДД.ММ.ГГГГ:"
-    try:
-        day, month, year = map(int, answer.split('.'))
-        date_type(year, month, day)
-    except ValueError:
-        return "Введите корректную дату в формате ДД.ММ.ГГГГ:"
+    if not answer:
+        return "Дата не может быть пустой"
+    digits = re.sub(r'\D', '', answer)
+    if not digits:
+        return "Введите дату цифрами (например: 02.03.2026 или 020326):"
+    if len(digits) > 8:
+        return "Слишком много цифр. Максимум 8 цифр для даты:"
+    if re.search(r'[a-zA-Zа-яА-ЯёЁ]', answer):
+        return "Дата должна содержать только цифры и точки:"
     return None
 
 
@@ -48,3 +50,36 @@ def is_skip(answer: str) -> bool:
 def format_money(answer: str) -> str:
     amount = int(float(answer.replace(',', '.')))
     return f"{amount:,}".replace(',', ' ')
+
+
+def normalize_date(answer: str) -> str:
+    answer = answer.strip()
+    parts = re.split(r'[.\s/\-]+', answer)
+    if len(parts) == 3:
+        try:
+            d_str, m_str, y_str = parts
+            if not d_str or not m_str or not y_str:
+                return answer
+            if len(y_str) not in (2, 4):
+                return answer
+            day = int(d_str)
+            month = int(m_str)
+            year = int(y_str)
+            if len(y_str) == 2:
+                year = 2000 + year
+            date_type(year, month, day)
+            return f"{day:02d}.{month:02d}.{year}"
+        except (ValueError, TypeError):
+            return answer
+    digits = re.sub(r'\D', '', answer)
+    if len(digits) == 6:
+        day, month, year = int(digits[0:2]), int(digits[2:4]), 2000 + int(digits[4:6])
+    elif len(digits) == 8:
+        day, month, year = int(digits[0:2]), int(digits[2:4]), int(digits[4:8])
+    else:
+        return answer
+    try:
+        date_type(year, month, day)
+    except ValueError:
+        return answer
+    return f"{day:02d}.{month:02d}.{year}"
