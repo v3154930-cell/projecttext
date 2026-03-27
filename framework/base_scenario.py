@@ -103,7 +103,7 @@ class BaseScenario:
                 return '\n' + match.group(2) + '\n'
             return ''
 
-        pattern = r'\n{{#if (has_\w+)}}(.*?){{/if}}\n'
+        pattern = r'\n?{{#if (has_\w+)}}(.*?){{/if}}\n?'
         document = re.sub(pattern, _replace_conditional, template, flags=re.DOTALL)
 
         document = re.sub(r'\n{3,}', '\n\n', document)
