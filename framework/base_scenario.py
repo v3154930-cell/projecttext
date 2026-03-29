@@ -22,6 +22,7 @@ class BaseScenario:
         self._in_edit_mode = False
         self._return_to_preview = False
         self._skip_edit_return = False
+        self._edit_error = None
 
     def get_current_step(self) -> str:
         if self._current_index < len(self._steps):
@@ -37,10 +38,15 @@ class BaseScenario:
         if self._preview_enabled and self._in_preview:
             return "Проверьте правильность заполнения:\n\n" + self._preview_document + "\n\nВыберите действие:\n1. Подтвердить\n2. Редактировать"
         if self._in_edit_mode:
-            lines = ["Выберите поле для редактирования:\n"]
-            for label, value, idx in self._editable_fields():
+            prefix = ""
+            if self._edit_error:
+                prefix = self._edit_error + "\n\n"
+                self._edit_error = None
+            fields = self._editable_fields()
+            lines = [prefix + "Выберите поле для редактирования:\n"]
+            for i, (label, value, _) in enumerate(fields, 1):
                 val_short = (value[:40] + "...") if value and len(value) > 40 else (value or "")
-                lines.append(f"  {len(lines)}. {label}: {val_short}")
+                lines.append(f"  {i}. {label}: {val_short}")
             return "\n".join(lines)
         if self._current_index < len(self._steps):
             return self._steps[self._current_index].question
@@ -140,10 +146,13 @@ class BaseScenario:
             try:
                 idx = int(answer) - 1
             except ValueError:
-                return "Введите номер поля:"
+                self._edit_error = "Введите номер поля из списка."
+                return self.get_next_question()
             fields = self._editable_fields()
             if idx < 0 or idx >= len(fields):
-                return f"Введите число от 1 до {len(fields)}:"
+                self._edit_error = f"Выберите число от 1 до {len(fields)}."
+                return self.get_next_question()
+            self._edit_error = None
             _, _, step_idx = fields[idx]
             self._current_index = step_idx
             self._in_edit_mode = False

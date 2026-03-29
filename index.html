@@ -887,6 +887,10 @@
                     previewEditBtn.parentNode.removeChild(previewEditBtn);
                 }
                 originalShowQuestion(question, step, fullResponse);
+                // Pre-fill current value if returning from edit
+                if (fullResponse && fullResponse.current_value) {
+                    answerInput.value = fullResponse.current_value;
+                }
             }
         }
 

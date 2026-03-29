@@ -37,6 +37,7 @@ class AgentResponse(BaseModel):
     current_step: Optional[str] = None
     optional: bool = False
     field_type: Optional[str] = None
+    current_value: Optional[str] = None
 
 class ScenarioRequest(BaseModel):
     session_id: str
@@ -114,12 +115,18 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         
         # Если не завершён, получаем следующий вопрос
         next_question = scenario.get_next_question()
+        cv = None
+        if getattr(scenario, '_return_to_preview', False):
+            step = scenario._steps[scenario._current_index]
+            if step.data_key and step.data_key in scenario.data:
+                cv = str(scenario.data[step.data_key])
         return AgentResponse(
             question=next_question,
             session_id=session_id,
             current_step=scenario.get_current_step(),
             optional=getattr(scenario, 'is_current_optional', lambda: False)(),
-            field_type=getattr(scenario, 'get_current_field_type', lambda: None)()
+            field_type=getattr(scenario, 'get_current_field_type', lambda: None)(),
+            current_value=cv,
         )
     
     # Первый вызов без ответа - инициализируем сценарий
