@@ -95,6 +95,28 @@ def normalize_passport(answer: str) -> str:
     return answer.strip()
 
 
+def validate_passport_series(answer: str) -> str | None:
+    digits = re.sub(r'\D', '', answer)
+    if len(digits) != 4:
+        return "Серия паспорта должна содержать 4 цифры:"
+    return None
+
+
+def normalize_passport_series(answer: str) -> str:
+    return re.sub(r'\D', '', answer)
+
+
+def validate_passport_number(answer: str) -> str | None:
+    digits = re.sub(r'\D', '', answer)
+    if len(digits) != 6:
+        return "Номер паспорта должен содержать 6 цифр:"
+    return None
+
+
+def normalize_passport_number(answer: str) -> str:
+    return re.sub(r'\D', '', answer)
+
+
 def normalize_date(answer: str) -> str:
     answer = answer.strip()
     parts = re.split(r'[.\s/\-]+', answer)

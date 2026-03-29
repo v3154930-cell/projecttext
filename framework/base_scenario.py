@@ -10,6 +10,7 @@ class BaseScenario:
         self._steps = steps
         self._template_path = template_path
         self._preview_enabled = False
+        self._field_assemblers = {}
         self.reset()
 
     def reset(self):
@@ -80,6 +81,10 @@ class BaseScenario:
             self._ready_to_generate = False
             return "Ошибка генерации документа. Пожалуйста, проверьте введенные данные."
 
+    def _run_assemblers(self):
+        for key, fn in self._field_assemblers.items():
+            self.data[key] = fn(self.data)
+
     def process_answer(self, answer: str) -> Optional[str]:
         if self._preview_enabled and self._in_preview:
             answer = answer.strip().lower()
@@ -106,6 +111,7 @@ class BaseScenario:
 
         if step.optional and self._is_skip(answer):
             result = self._advance_to_next_step()
+            self._run_assemblers()
             preview_result = self._try_enter_preview()
             return preview_result if preview_result is not None else result
 
@@ -124,6 +130,7 @@ class BaseScenario:
                 return error
 
         result = self._advance_to_next_step()
+        self._run_assemblers()
         preview_result = self._try_enter_preview()
         return preview_result if preview_result is not None else result
 
