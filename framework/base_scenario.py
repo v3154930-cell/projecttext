@@ -33,6 +33,8 @@ class BaseScenario:
     def is_complete(self) -> bool:
         if self._preview_enabled and self._in_preview:
             return False
+        if self._in_edit_mode or self._post_edit_choice or self._return_to_preview:
+            return False
         return self._ready_to_generate
 
     def get_next_question(self) -> Optional[str]:
