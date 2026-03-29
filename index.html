@@ -822,6 +822,11 @@
 
         // Detect preview state and show/hide input accordingly
         function updateUIForPreview(question, step, fullResponse) {
+            // Remove edit buttons if present
+            document.querySelectorAll('.edit-field-btn').forEach(b => b.remove());
+            const editBackBtn = document.getElementById('editBackBtn');
+            if (editBackBtn) editBackBtn.remove();
+
             if (fullResponse && fullResponse.field_type === 'preview') {
                 // Preview state: hide input, show buttons
                 answerInput.style.display = 'none';
@@ -833,6 +838,44 @@
                     questionArea.parentNode.insertBefore(previewEditBtn, documentArea);
                 }
                 showPreview(question, step, fullResponse);
+            } else if (fullResponse && fullResponse.field_type === 'edit_select') {
+                // Edit select state: show clickable field buttons
+                answerInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+                if (previewConfirmBtn.parentNode) {
+                    previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
+                    previewEditBtn.parentNode.removeChild(previewEditBtn);
+                }
+                questionArea.innerText = question ?? 'Выберите поле';
+                const fieldLines = (question || '').split('\n').filter(l => l.trim().match(/^\s*\d+\./));
+                fieldLines.forEach(line => {
+                    const match = line.trim().match(/^(\d+)\.\s*(.+)/);
+                    if (match) {
+                        const btn = document.createElement('button');
+                        btn.className = 'edit-field-btn btn-secondary';
+                        btn.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;padding:10px 16px;';
+                        btn.innerText = match[2];
+                        btn.addEventListener('click', () => {
+                            answerInput.value = match[1];
+                            currentFieldType = null;
+                            sendAnswer();
+                        });
+                        questionArea.parentNode.insertBefore(btn, documentArea);
+                    }
+                });
+                const backBtn = document.createElement('button');
+                backBtn.id = 'editBackBtn';
+                backBtn.className = 'btn-secondary';
+                backBtn.style.cssText = 'margin-top:8px;';
+                backBtn.innerText = 'Назад к просмотру';
+                backBtn.addEventListener('click', () => {
+                    answerInput.value = 'назад';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                questionArea.parentNode.insertBefore(backBtn, documentArea);
+                stepInfo.innerText = `Сценарий: ${currentScenarioType} | выбор поля | session: ${currentSessionId ?? '—'}`;
             } else {
                 // Normal state: show input, hide buttons
                 answerInput.style.display = 'block';
