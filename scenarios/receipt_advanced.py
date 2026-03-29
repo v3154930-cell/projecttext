@@ -1,5 +1,7 @@
-from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio, normalize_passport
-from framework.common_components import create_fio_step, create_passport_step
+from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio
+from framework.common_components import create_fio_step, create_passport_steps
+
+PASSPORT_STEPS, PASSPORT_ASSEMBLER = create_passport_steps("ask_passport", "passport")
 
 STEPS = [
     FieldStep(
@@ -12,11 +14,7 @@ STEPS = [
         data_key="fio_receiver",
         role_label="ФИО",
     ),
-    create_passport_step(
-        name="ask_passport",
-        question="Введите паспортные данные получателя (серия, номер, кем и когда выдан):",
-        data_key="passport",
-    ),
+    *PASSPORT_STEPS,
     create_fio_step(
         name="ask_sender_fio",
         question="Введите ФИО передающего (того, кто дает деньги):",
@@ -93,3 +91,4 @@ class ReceiptAdvancedScenario(BaseScenario):
     def __init__(self):
         super().__init__(steps=STEPS, template_path="templates/receipt_advanced.txt")
         self._preview_enabled = True
+        self._field_assemblers["passport"] = PASSPORT_ASSEMBLER
