@@ -4,3 +4,13 @@ __pycache__/
 venv/
 .env
 *.log
+
+# Debug files
+_debug_doc.txt
+_server_err*.txt
+
+# Test output files
+test_output*.txt
+
+# Step files
+step_*.json

@@ -1,33 +1,27 @@
 from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio, normalize_passport
+from framework.common_components import create_fio_step, create_passport_step
 
 STEPS = [
     FieldStep(
         name="start",
         question="",
     ),
-    FieldStep(
+    create_fio_step(
         name="ask_receiver_fio",
         question="Введите ФИО получателя (того, кто берет деньги):",
         data_key="fio_receiver",
-        field_type=FieldType.FIO,
-        validators=[lambda a: required(a, "ФИО")],
-        post_process=normalize_fio,
+        role_label="ФИО",
     ),
-    FieldStep(
+    create_passport_step(
         name="ask_passport",
         question="Введите паспортные данные получателя (серия, номер, кем и когда выдан):",
         data_key="passport",
-        field_type=FieldType.PASSPORT,
-        validators=[validate_passport],
-        post_process=normalize_passport,
     ),
-    FieldStep(
+    create_fio_step(
         name="ask_sender_fio",
         question="Введите ФИО передающего (того, кто дает деньги):",
         data_key="fio_sender",
-        field_type=FieldType.FIO,
-        validators=[lambda a: required(a, "ФИО передающего")],
-        post_process=normalize_fio,
+        role_label="ФИО передающего",
     ),
     FieldStep(
         name="ask_amount",

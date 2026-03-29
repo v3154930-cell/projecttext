@@ -1,25 +1,22 @@
 from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio
+from framework.common_components import create_fio_step
 
 STEPS = [
     FieldStep(
         name="start",
         question="",
     ),
-    FieldStep(
+    create_fio_step(
         name="ask_lender",
         question="Введите займодавца (ФИО или наименование организации):",
         data_key="lender",
-        field_type=FieldType.FIO,
-        validators=[lambda a: required(a, "Займодавец")],
-        post_process=normalize_fio,
+        role_label="Займодавец",
     ),
-    FieldStep(
+    create_fio_step(
         name="ask_borrower",
         question="Введите заемщика (ФИО или наименование организации):",
         data_key="borrower",
-        field_type=FieldType.FIO,
-        validators=[lambda a: required(a, "Заемщик")],
-        post_process=normalize_fio,
+        role_label="Заемщик",
     ),
     FieldStep(
         name="ask_amount",
