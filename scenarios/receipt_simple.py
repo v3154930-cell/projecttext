@@ -37,7 +37,8 @@ class ReceiptSimpleScenario(BaseScenario):
             elif answer in ["2", "редактировать", "edit"]:
                 self._in_preview = False
                 self._ready_to_generate = False
-                return "Выберите поле для редактирования или введите 'назад' для возврата к последнему шагу:"
+                self._current_index = len(self._steps) - 1
+                return None
             else:
                 return "Пожалуйста, выберите: 1 - Подтвердить, 2 - Редактировать"
         
