@@ -92,3 +92,4 @@ STEPS = [
 class ReceiptAdvancedScenario(BaseScenario):
     def __init__(self):
         super().__init__(steps=STEPS, template_path="templates/receipt_advanced.txt")
+        self._preview_enabled = True

@@ -9,12 +9,15 @@ class BaseScenario:
     def __init__(self, steps: list[FieldStep], template_path: str):
         self._steps = steps
         self._template_path = template_path
+        self._preview_enabled = False
         self.reset()
 
     def reset(self):
         self._current_index = 0
         self.data = {}
         self._ready_to_generate = False
+        self._in_preview = False
+        self._preview_document = ""
 
     def get_current_step(self) -> str:
         if self._current_index < len(self._steps):
@@ -22,19 +25,27 @@ class BaseScenario:
         return "done"
 
     def is_complete(self) -> bool:
+        if self._preview_enabled and self._in_preview:
+            return False
         return self._ready_to_generate
 
     def get_next_question(self) -> Optional[str]:
+        if self._preview_enabled and self._in_preview:
+            return "Проверьте правильность заполнения:\n\n" + self._preview_document + "\n\nВыберите действие:\n1. Подтвердить\n2. Редактировать"
         if self._current_index < len(self._steps):
             return self._steps[self._current_index].question
         return None
 
     def is_current_optional(self) -> bool:
+        if self._preview_enabled and self._in_preview:
+            return False
         if self._current_index < len(self._steps):
             return self._steps[self._current_index].optional
         return False
 
     def get_current_field_type(self) -> Optional[str]:
+        if self._preview_enabled and self._in_preview:
+            return "preview"
         if self._current_index < len(self._steps):
             return self._steps[self._current_index].field_type.value
         return None
@@ -57,9 +68,34 @@ class BaseScenario:
         self._ready_to_generate = True
         return None
 
-    def process_answer(self, answer: str) -> Optional[str]:
-        if self._ready_to_generate:
+    def _try_enter_preview(self) -> Optional[str]:
+        """If preview enabled and ready, enter preview. Returns None on success or error string."""
+        if not (self._preview_enabled and self._ready_to_generate):
             return None
+        try:
+            self._preview_document = self.generate_document()
+            self._in_preview = True
+            return self.get_next_question()
+        except Exception:
+            self._ready_to_generate = False
+            return "Ошибка генерации документа. Пожалуйста, проверьте введенные данные."
+
+    def process_answer(self, answer: str) -> Optional[str]:
+        if self._preview_enabled and self._in_preview:
+            answer = answer.strip().lower()
+            if answer in ["1", "подтвердить", "confirm"]:
+                self._in_preview = False
+                return None
+            elif answer in ["2", "редактировать", "edit"]:
+                self._in_preview = False
+                self._ready_to_generate = False
+                self._current_index = len(self._steps) - 1
+                return None
+            else:
+                return "Пожалуйста, выберите: 1 - Подтвердить, 2 - Редактировать"
+
+        if self._ready_to_generate:
+            return self._try_enter_preview() if self._preview_enabled else None
 
         answer = answer.strip()
 
@@ -69,7 +105,9 @@ class BaseScenario:
         step = self._steps[self._current_index]
 
         if step.optional and self._is_skip(answer):
-            return self._advance_to_next_step()
+            result = self._advance_to_next_step()
+            preview_result = self._try_enter_preview()
+            return preview_result if preview_result is not None else result
 
         for validator in step.validators:
             error: Optional[str] = validator(answer)
@@ -85,7 +123,9 @@ class BaseScenario:
             if error:
                 return error
 
-        return self._advance_to_next_step()
+        result = self._advance_to_next_step()
+        preview_result = self._try_enter_preview()
+        return preview_result if preview_result is not None else result
 
     def generate_document(self, template_path: Optional[str] = None) -> str:
         if not self._ready_to_generate:

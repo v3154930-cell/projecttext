@@ -479,6 +479,8 @@
         function showSelector() {
             selectorBlock.style.display = 'block';
             scenarioPanel.style.display = 'none';
+            resultPanel.style.display = 'none';
+            resultDocument.innerText = '';
             currentSessionId = null;
             currentScenarioType = null;
             isComplete = false;
@@ -489,6 +491,7 @@
             questionArea.innerText = '';
             stepInfo.innerText = '';
             skipBtn.classList.add('hidden');
+            window.scrollTo(0, 0);
         }
 
         function showScenario(type, name) {
@@ -646,8 +649,7 @@
 
                 if (data.error) handleError(data.error, data);
                 else if (data.is_complete) {
-                    // Проверяем, является ли это receipt_simple и есть ли документ
-                    if (currentScenarioType === 'receipt_simple' && data.document) {
+                    if (data.document) {
                         showResult(data.document);
                     } else {
                         showDocument(data.document, data);
@@ -820,7 +822,7 @@
 
         // Detect preview state and show/hide input accordingly
         function updateUIForPreview(question, step, fullResponse) {
-            if (currentScenarioType === 'receipt_simple' && fullResponse && fullResponse.field_type === 'preview') {
+            if (fullResponse && fullResponse.field_type === 'preview') {
                 // Preview state: hide input, show buttons
                 answerInput.style.display = 'none';
                 sendBtn.style.display = 'none';
