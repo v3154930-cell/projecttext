@@ -117,9 +117,11 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         next_question = scenario.get_next_question()
         cv = None
         if getattr(scenario, '_return_to_preview', False):
-            step = scenario._steps[scenario._current_index]
-            if step.data_key and step.data_key in scenario.data:
-                cv = str(scenario.data[step.data_key])
+            idx = scenario._current_index
+            if 0 <= idx < len(scenario._steps):
+                step = scenario._steps[idx]
+                if step.data_key and step.data_key in scenario.data:
+                    cv = str(scenario.data[step.data_key])
         return AgentResponse(
             question=next_question,
             session_id=session_id,
