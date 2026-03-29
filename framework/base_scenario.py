@@ -23,6 +23,7 @@ class BaseScenario:
         self._return_to_preview = False
         self._skip_edit_return = False
         self._edit_error = None
+        self._post_edit_choice = False
 
     def get_current_step(self) -> str:
         if self._current_index < len(self._steps):
@@ -37,6 +38,8 @@ class BaseScenario:
     def get_next_question(self) -> Optional[str]:
         if self._preview_enabled and self._in_preview:
             return "Проверьте правильность заполнения:\n\n" + self._preview_document + "\n\nВыберите действие:\n1. Подтвердить\n2. Редактировать"
+        if self._post_edit_choice:
+            return "Поле сохранено.\n\n1. Редактировать еще поле\n2. Вернуться к просмотру"
         if self._in_edit_mode:
             prefix = ""
             if self._edit_error:
@@ -62,6 +65,8 @@ class BaseScenario:
     def get_current_field_type(self) -> Optional[str]:
         if self._preview_enabled and self._in_preview:
             return "preview"
+        if self._post_edit_choice:
+            return "post_edit_choice"
         if self._in_edit_mode:
             return "edit_select"
         if self._current_index < len(self._steps):
@@ -135,6 +140,21 @@ class BaseScenario:
             pass
 
     def process_answer(self, answer: str) -> Optional[str]:
+        # Post-edit choice: edit another field or return to preview
+        if self._post_edit_choice:
+            answer = answer.strip().lower()
+            if answer in ["1", "редактировать", "edit"]:
+                self._post_edit_choice = False
+                self._in_edit_mode = True
+                return self.get_next_question()
+            elif answer in ["2", "просмотр", "preview", "назад", "back"]:
+                self._post_edit_choice = False
+                self._return_to_preview = False
+                self._return_to_preview_now()
+                return self.get_next_question()
+            else:
+                return "Выберите: 1 - Редактировать еще поле, 2 - Вернуться к просмотру"
+
         # Edit mode: handle field selection from preview "Редактировать"
         if self._in_edit_mode:
             answer = answer.strip()
@@ -166,7 +186,7 @@ class BaseScenario:
                 if self._is_skip(answer):
                     self._skip_edit_return = False
                     self._return_to_preview = False
-                    self._return_to_preview_now()
+                    self._post_edit_choice = True
                     return self.get_next_question()
                 else:
                     self._skip_edit_return = False
@@ -176,7 +196,7 @@ class BaseScenario:
 
             if step.optional and self._is_skip(answer):
                 self._return_to_preview = False
-                self._return_to_preview_now()
+                self._post_edit_choice = True
                 return self.get_next_question()
 
             for validator in step.validators:
@@ -194,7 +214,7 @@ class BaseScenario:
                     return error
 
             self._return_to_preview = False
-            self._return_to_preview_now()
+            self._post_edit_choice = True
             return self.get_next_question()
 
         # Preview: handle confirm / edit

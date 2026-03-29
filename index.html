@@ -651,7 +651,38 @@
                 else if (data.is_complete) {
                     if (data.document) {
                         showResult(data.document);
-                    } else {
+            } else if (fullResponse && fullResponse.field_type === 'post_edit_choice') {
+                // Post-edit choice: edit another or return to preview
+                answerInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+                if (previewConfirmBtn.parentNode) {
+                    previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
+                    previewEditBtn.parentNode.removeChild(previewEditBtn);
+                }
+                questionArea.innerText = question ?? 'Поле сохранено.';
+                const moreBtn = document.createElement('button');
+                moreBtn.className = 'edit-field-btn btn-primary';
+                moreBtn.style.cssText = 'margin:8px 8px 0 0;';
+                moreBtn.innerText = 'Редактировать еще поле';
+                moreBtn.addEventListener('click', () => {
+                    answerInput.value = '1';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'edit-field-btn btn-secondary';
+                doneBtn.style.cssText = 'margin-top:8px;';
+                doneBtn.innerText = 'Вернуться к просмотру';
+                doneBtn.addEventListener('click', () => {
+                    answerInput.value = '2';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                questionArea.parentNode.insertBefore(moreBtn, documentArea);
+                questionArea.parentNode.insertBefore(doneBtn, documentArea);
+                stepInfo.innerText = `Сценарий: ${currentScenarioType} | после редактирования | session: ${currentSessionId ?? '—'}`;
+            } else {
                         showDocument(data.document, data);
                     }
                 }
