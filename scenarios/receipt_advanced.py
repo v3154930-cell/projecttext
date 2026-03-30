@@ -62,9 +62,9 @@ STEPS = [
         post_process=normalize_percent,
     ),
     FieldStep(
-        name="ask_interest_period",
-        question="Укажите период начисления процентов (например: 'со дня получения до дня возврата'):",
-        data_key="interest_period",
+        name="ask_payment_option",
+        question="Выберите вариант погашения процентов:\n\n1. Единовременно в конце срока\n2. Ежемесячно (аннуитетные платежи)\n3. Ежемесячно (дифференцированные платежи)\n\nВведите номер варианта (или пропустите):",
+        data_key="payment_option",
         field_type=FieldType.TEXT,
         optional=True,
         depends_on="interest_rate",

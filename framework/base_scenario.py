@@ -119,7 +119,7 @@ class BaseScenario:
             "passport_date": "Паспорт (дата выдачи)", "passport_code": "Паспорт (код подразделения)",
             "amount": "Сумма", "date": "Дата", "return_date": "Срок возврата", "city": "Город",
             "term": "Срок возврата", "interest_rate": "Процентная ставка",
-            "interest_period": "Период процентов", "penalty": "Штраф/пени",
+            "payment_option": "Вариант погашения", "penalty": "Штраф/пени",
             "repayment_order": "Порядок возврата", "repayment_method": "Порядок возврата",
             "purpose": "Цель займа", "collateral": "Обеспечение",
         }

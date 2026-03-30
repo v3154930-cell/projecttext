@@ -58,6 +58,14 @@ STEPS = [
         post_process=normalize_percent,
     ),
     FieldStep(
+        name="ask_payment_option",
+        question="Выберите вариант погашения процентов:\n\n1. Единовременно в конце срока\n2. Ежемесячно (аннуитетные платежи)\n3. Ежемесячно (дифференцированные платежи)\n\nВведите номер варианта (или пропустите):",
+        data_key="payment_option",
+        field_type=FieldType.TEXT,
+        optional=True,
+        depends_on="interest_rate",
+    ),
+    FieldStep(
         name="ask_repayment_method",
         question="Укажите порядок возврата (например: 'единовременно', 'по частям'):",
         data_key="repayment_method",
