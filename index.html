@@ -586,6 +586,7 @@
         }
 
         function showDocument(docText, fullResponse = null) {
+            console.log('showDocument called, scenarioType:', currentScenarioType);
             documentArea.innerText = docText || 'Документ пуст';
             documentArea.style.display = 'block';
             questionArea.innerText = 'Документ сформирован. Нажмите "Назад" для выбора другого документа.';
@@ -658,6 +659,10 @@
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | документ готов | session: ${currentSessionId ?? '—'}`;
             isComplete = true;
             if (fullResponse) logToDebug(fullResponse);
+            
+            // Проверяем, что блок вставлен
+            const legalBlock = document.getElementById('legalInfoBlock');
+            console.log('Legal block inserted:', legalBlock);
         }
 
         function showResult(docText) {
