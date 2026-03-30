@@ -255,6 +255,49 @@
             display: none;
         }
 
+        .choice-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px 20px;
+            border: 1px solid var(--primary-blue);
+            border-radius: 12px;
+            background: white;
+            color: var(--primary-blue);
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .choice-btn:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .choice-skip {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 8px 20px;
+            border: 1px solid #D0D5DD;
+            border-radius: 30px;
+            background: transparent;
+            color: var(--text-gray);
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .choice-skip:hover {
+            background: #F0F0F0;
+        }
+
         .document-area {
             margin-top: 30px;
             background: #F8FAFE;
@@ -642,6 +685,7 @@
         }
 
         function formatMoney(value) {
+            if (value === 0) value = 0;
             return value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
         }
 
@@ -1295,6 +1339,30 @@
             sendAnswer();
         });
 
+        function parseChoiceOptions(question) {
+            if (!question) return null;
+            const lines = question.split('\n');
+            const choices = [];
+            let lastChoiceIdx = -1;
+            let firstChoiceIdx = -1;
+
+            for (let i = 0; i < lines.length; i++) {
+                const match = lines[i].trim().match(/^(\d+)\.\s+(.+)/);
+                if (match) {
+                    if (firstChoiceIdx === -1) firstChoiceIdx = i;
+                    lastChoiceIdx = i;
+                    choices.push({ value: match[1], label: match[2] });
+                }
+            }
+
+            if (choices.length < 2) return null;
+
+            const header = lines.slice(0, firstChoiceIdx).join('\n').trim();
+            const footer = lines.slice(lastChoiceIdx + 1).join('\n').trim();
+
+            return { header, choices, footer };
+        }
+
         // Detect preview state and show/hide input accordingly
         function updateUIForPreview(question, step, fullResponse) {
             // Remove edit buttons if present
@@ -1352,19 +1420,71 @@
                 questionArea.parentNode.insertBefore(backBtn, documentArea);
                 stepInfo.innerText = `Сценарий: ${currentScenarioType} | выбор поля | session: ${currentSessionId ?? '—'}`;
             } else {
-                // Normal state: show input, hide buttons
-                answerInput.style.display = 'block';
-                sendBtn.style.display = 'inline-block';
-                skipBtn.style.display = 'inline-block';
+                // Remove existing choice buttons
+                const oldChoiceContainer = document.getElementById('choiceOptions');
+                if (oldChoiceContainer) oldChoiceContainer.remove();
+
                 // Remove preview buttons if present
                 if (previewConfirmBtn.parentNode) {
                     previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
                     previewEditBtn.parentNode.removeChild(previewEditBtn);
                 }
-                originalShowQuestion(question, step, fullResponse);
-                // Pre-fill current value if returning from edit
-                if (fullResponse && fullResponse.current_value) {
-                    answerInput.value = fullResponse.current_value;
+
+                // Check if this is a choice step (numbered options in question)
+                const choices = parseChoiceOptions(question);
+
+                if (choices) {
+                    // Choice step: hide input, show buttons
+                    answerInput.style.display = 'none';
+                    sendBtn.style.display = 'none';
+                    skipBtn.style.display = 'none';
+
+                    questionArea.innerText = choices.header || question;
+
+                    const container = document.createElement('div');
+                    container.id = 'choiceOptions';
+                    container.className = 'choice-options';
+
+                    choices.choices.forEach(c => {
+                        const btn = document.createElement('button');
+                        btn.className = 'choice-btn';
+                        btn.innerText = c.label;
+                        btn.addEventListener('click', () => {
+                            answerInput.value = c.value;
+                            sendAnswer();
+                        });
+                        container.appendChild(btn);
+                    });
+
+                    if (fullResponse && fullResponse.optional) {
+                        const skipBtnEl = document.createElement('button');
+                        skipBtnEl.className = 'choice-skip';
+                        skipBtnEl.innerText = 'Пропустить';
+                        skipBtnEl.addEventListener('click', () => {
+                            answerInput.value = '';
+                            skipAnswer();
+                        });
+                        container.appendChild(skipBtnEl);
+                    }
+
+                    questionArea.parentNode.insertBefore(container, questionArea.nextSibling);
+
+                    // Update step info
+                    const stepDisplay = step ? `Шаг: ${String(step)}` : '';
+                    stepInfo.innerText = `Сценарий: ${currentScenarioType} | ${stepDisplay} | session: ${currentSessionId ?? '—'}`;
+                    isComplete = false;
+                    currentFieldType = (fullResponse && fullResponse.field_type) || null;
+                    if (fullResponse) logToDebug(fullResponse);
+                } else {
+                    // Normal step: show input
+                    answerInput.style.display = 'block';
+                    sendBtn.style.display = 'inline-block';
+                    skipBtn.style.display = '';
+                    originalShowQuestion(question, step, fullResponse);
+                    // Pre-fill current value if returning from edit
+                    if (fullResponse && fullResponse.current_value) {
+                        answerInput.value = fullResponse.current_value;
+                    }
                 }
             }
         }
