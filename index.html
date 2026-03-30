@@ -355,6 +355,32 @@
             #resultPanel { display: block !important; margin: 0; padding: 0; border: none; }
             .result-header { font-size: 20px; margin-bottom: 12px; }
             .result-document { border: none; max-height: none; overflow: visible; padding: 0; font-size: 14px; }
+            .legal-info {
+                break-inside: avoid;
+                background: none;
+                border-left: 2px solid #ccc;
+            }
+        }
+
+        .legal-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #F9F9F9;
+            border-left: 4px solid var(--accent-teal);
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 8px;
+        }
+        .legal-info h3 {
+            margin-top: 0;
+            color: var(--primary-blue);
+        }
+        .legal-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .legal-info li {
+            margin-bottom: 5px;
         }
 
         @media (max-width: 600px) {
@@ -500,6 +526,9 @@
             questionArea.innerText = '';
             stepInfo.innerText = '';
             skipBtn.classList.add('hidden');
+            // Удаляем правовой блок, если есть
+            const existingLegal = document.getElementById('legalInfoBlock');
+            if (existingLegal) existingLegal.remove();
             window.scrollTo(0, 0);
         }
 
@@ -560,6 +589,69 @@
             documentArea.innerText = docText || 'Документ пуст';
             documentArea.style.display = 'block';
             questionArea.innerText = 'Документ сформирован. Нажмите "Назад" для выбора другого документа.';
+            
+            // Удаляем предыдущий правовой блок, если есть
+            const existingLegal = document.getElementById('legalInfoBlock');
+            if (existingLegal) existingLegal.remove();
+            
+            // Формируем правовой блок в зависимости от типа сценария
+            let legalHtml = '';
+            switch(currentScenarioType) {
+                case 'receipt_simple':
+                    legalHtml = `
+                        <div class="legal-info" id="legalInfoBlock">
+                            <h3>Правовая информация</h3>
+                            <ul>
+                                <li><strong>Статья 807 ГК РФ</strong> — Договор займа</li>
+                                <li><strong>Статья 808 ГК РФ</strong> — Форма договора займа</li>
+                                <li><strong>Статья 810 ГК РФ</strong> — Обязанность заемщика возвратить сумму займа</li>
+                            </ul>
+                            <p><strong>Рекомендация:</strong> Расписка является подтверждением передачи денег. Храните её до полного возврата долга.</p>
+                        </div>
+                    `;
+                    break;
+                case 'receipt_advanced':
+                    legalHtml = `
+                        <div class="legal-info" id="legalInfoBlock">
+                            <h3>Правовая информация</h3>
+                            <ul>
+                                <li><strong>Статья 807 ГК РФ</strong> — Договор займа</li>
+                                <li><strong>Статья 808 ГК РФ</strong> — Форма договора займа</li>
+                                <li><strong>Статья 809 ГК РФ</strong> — Проценты по договору займа</li>
+                                <li><strong>Статья 810 ГК РФ</strong> — Обязанность заемщика возвратить сумму займа</li>
+                                <li><strong>Статья 395 ГК РФ</strong> — Ответственность за неисполнение денежного обязательства</li>
+                            </ul>
+                            <p><strong>Рекомендация:</strong> Проценты считаются со дня получения денег, если иное не указано. При просрочке начисляется неустойка по ст. 395.</p>
+                        </div>
+                    `;
+                    break;
+                case 'loan':
+                    legalHtml = `
+                        <div class="legal-info" id="legalInfoBlock">
+                            <h3>Правовая информация</h3>
+                            <ul>
+                                <li><strong>Статья 807 ГК РФ</strong> — Договор займа</li>
+                                <li><strong>Статья 808 ГК РФ</strong> — Форма договора займа</li>
+                                <li><strong>Статья 809 ГК РФ</strong> — Проценты по договору займа</li>
+                                <li><strong>Статья 810 ГК РФ</strong> — Обязанность заемщика возвратить сумму займа</li>
+                                <li><strong>Статья 811 ГК РФ</strong> — Последствия нарушения заемщиком договора займа</li>
+                                <li><strong>Статья 395 ГК РФ</strong> — Ответственность за неисполнение денежного обязательства</li>
+                                <li><strong>Статья 330 ГК РФ</strong> — Неустойка</li>
+                            </ul>
+                            <p><strong>Рекомендация:</strong> Составьте договор в двух экземплярах, подпишите у каждой стороны. При споре обратитесь к юристу.</p>
+                        </div>
+                    `;
+                    break;
+                default:
+                    legalHtml = `
+                        <div class="legal-info" id="legalInfoBlock">
+                            <h3>Правовая информация</h3>
+                            <p>По данному документу информация будет добавлена позже.</p>
+                        </div>
+                    `;
+            }
+            documentArea.insertAdjacentHTML('afterend', legalHtml);
+            
             sendBtn.disabled = true;
             answerInput.disabled = true;
             skipBtn.classList.add('hidden');
