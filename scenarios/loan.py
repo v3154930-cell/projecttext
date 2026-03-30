@@ -66,13 +66,6 @@ STEPS = [
         depends_on="interest_rate",
     ),
     FieldStep(
-        name="ask_repayment_method",
-        question="Укажите порядок возврата (например: 'единовременно', 'по частям'):",
-        data_key="repayment_method",
-        field_type=FieldType.TEXT,
-        validators=[lambda a: required(a, "Порядок возврата")],
-    ),
-    FieldStep(
         name="ask_city",
         question="Введите город составления договора:",
         data_key="city",

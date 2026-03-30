@@ -1118,15 +1118,49 @@
                 // Показываем калькулятор, если выбран вариант погашения
                 if (currentScenarioType === 'loan' || currentScenarioType === 'receipt_advanced') {
                     const amount = currentData.amount;
-                    const rate = currentData.interest_rate;
-                    const termDate = currentData.term || currentData.return_date;
+                    let rate = currentData.interest_rate;
+                    const termDate = currentData.return_date || currentData.term;
                     const paymentOption = currentData.payment_option;
+                    
                     console.log('checkAndShowCalculator called', { amount, rate, termDate, paymentOption, current_step: data.current_step });
-                    // Следующие шаги после выбора варианта погашения
-                    const stepsAfterPayment = ['ask_payment_option', 'ask_penalty', 'ask_repayment_order', 'ask_repayment_method', 'ask_purpose', 'ask_collateral', 'ask_city'];
-                    // Показываем калькулятор только после выбора варианта погашения
-                    if (amount && rate && termDate && paymentOption && stepsAfterPayment.includes(data.current_step)) {
-                        showCalculator(amount, rate, termDate, paymentOption);
+                    
+                    // Если есть все данные и выбран вариант погашения — показываем калькулятор
+                    if (amount && rate && termDate && paymentOption) {
+                        // Преобразуем сумму из строки с пробелами в число
+                        let cleanAmount = amount;
+                        if (typeof amount === 'string') {
+                            cleanAmount = parseFloat(amount.replace(/\s/g, '').replace(',', '.'));
+                        } else {
+                            cleanAmount = parseFloat(amount);
+                        }
+                        
+                        // Извлекаем число из ставки (например "10%" -> 10)
+                        let cleanRate = rate;
+                        if (typeof rate === 'string') {
+                            cleanRate = parseFloat(rate.replace('%', '').replace(',', '.'));
+                        } else {
+                            cleanRate = parseFloat(rate);
+                        }
+                        
+                        // Парсим дату
+                        let parsedDate = null;
+                        if (typeof termDate === 'string') {
+                            if (termDate.includes('.')) {
+                                const parts = termDate.split('.');
+                                parsedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                            } else {
+                                parsedDate = new Date(termDate);
+                            }
+                        } else {
+                            parsedDate = new Date(termDate);
+                        }
+                        
+                        if (!isNaN(parsedDate.getTime()) && !isNaN(cleanAmount) && !isNaN(cleanRate)) {
+                            console.log('Showing calculator with:', { cleanAmount, cleanRate, parsedDate, paymentOption });
+                            showCalculator(cleanAmount, cleanRate, parsedDate, paymentOption);
+                        } else {
+                            console.warn('Invalid data for calculator', { cleanAmount, cleanRate, parsedDate });
+                        }
                     } else {
                         document.getElementById('calcModal').style.display = 'none';
                     }
