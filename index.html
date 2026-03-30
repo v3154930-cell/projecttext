@@ -1068,9 +1068,9 @@
                 if (data.session_id && data.session_id !== currentSessionId) {
                     currentSessionId = data.session_id;
                 }
-                if (data.data) {
-                    currentData = { ...currentData, ...data.data };
-                    console.log('Current data updated:', currentData);
+                if (data.collected_data) {
+                    currentData = { ...currentData, ...data.collected_data };
+                    console.log('Current data updated from collected_data:', currentData);
                 }
                 console.log('Answer response:', { session: currentSessionId, step: data.current_step, data });
 

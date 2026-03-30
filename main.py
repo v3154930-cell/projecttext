@@ -38,6 +38,7 @@ class AgentResponse(BaseModel):
     optional: bool = False
     field_type: Optional[str] = None
     current_value: Optional[str] = None
+    collected_data: dict = {}
 
 class ScenarioRequest(BaseModel):
     session_id: str
@@ -83,7 +84,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         return AgentResponse(
             session_id=request.session_id or str(uuid.uuid4()),
             error="Сценарий в разработке",
-            current_step="unavailable"
+            current_step="unavailable",
+            collected_data={}
         )
     
     # Получаем или создаём сценарий
@@ -94,7 +96,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         return AgentResponse(
             session_id=session_id,
             error="Сценарий в разработке",
-            current_step="unavailable"
+            current_step="unavailable",
+            collected_data={}
         )
     
     template_path = template_map.get(scenario_type, "templates/receipt_simple.txt")
@@ -110,7 +113,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
                 is_complete=True,
                 document=document,
                 session_id=session_id,
-                current_step="done"
+                current_step="done",
+                collected_data=scenario.data
             )
         
         # Если не завершён, получаем следующий вопрос
@@ -129,6 +133,7 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
             optional=getattr(scenario, 'is_current_optional', lambda: False)(),
             field_type=getattr(scenario, 'get_current_field_type', lambda: None)(),
             current_value=cv,
+            collected_data=scenario.data
         )
     
     # Первый вызов без ответа - инициализируем сценарий
@@ -143,7 +148,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
         session_id=session_id,
         current_step=scenario.get_current_step(),
         optional=getattr(scenario, 'is_current_optional', lambda: False)(),
-        field_type=getattr(scenario, 'get_current_field_type', lambda: None)()
+        field_type=getattr(scenario, 'get_current_field_type', lambda: None)(),
+        collected_data=scenario.data
     )
 
 @app.post("/api/session/{session_id}/reset")
