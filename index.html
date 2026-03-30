@@ -544,6 +544,36 @@
         let currentFieldType = null;
         let currentData = {};
 
+        // Нормализаторы входных данных
+        function parseMoney(value) {
+            if (value === null || value === undefined) return NaN;
+            if (typeof value === 'number') return value;
+            return parseFloat(String(value).replace(/\s/g, '').replace(',', '.'));
+        }
+
+        function parsePercent(value) {
+            if (value === null || value === undefined) return NaN;
+            if (typeof value === 'number') return value;
+            return parseFloat(String(value).replace('%', '').replace(',', '.').trim());
+        }
+
+        function parseDate(value) {
+            if (!value) return null;
+            if (value instanceof Date && !isNaN(value.getTime())) return value;
+            if (typeof value === 'string') {
+                if (value.includes('.')) {
+                    const parts = value.split('.');
+                    if (parts.length === 3) {
+                        const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                        if (!isNaN(d.getTime())) return d;
+                    }
+                }
+                const d = new Date(value);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return null;
+        }
+
         // Функции расчёта
         function calculateSimpleInterest(amount, ratePercent, days) {
             return amount * (ratePercent / 100) * (days / 365);
@@ -564,7 +594,15 @@
             return principalPart + interestPart;
         }
 
-        function generatePaymentSchedule(amount, ratePercentPerYear, months, startDate, paymentType) {
+        function addMonthsSafe(baseDate, monthsToAdd) {
+            const y = baseDate.getFullYear();
+            const m = baseDate.getMonth() + monthsToAdd;
+            const d = baseDate.getDate();
+            const lastDay = new Date(y, m + 1, 0).getDate();
+            return new Date(y, m, Math.min(d, lastDay));
+        }
+
+        function generatePaymentSchedule(amount, ratePercentPerYear, months, startDate, paymentType, termDate) {
             const schedule = [];
             let remaining = amount;
             const monthlyRate = ratePercentPerYear / 100 / 12;
@@ -588,8 +626,8 @@
                     paymentAmount = principal + interest;
                 }
                 if (remaining < 0) remaining = 0;
-                const paymentDate = new Date(startDate);
-                paymentDate.setMonth(paymentDate.getMonth() + i);
+                let paymentDate = addMonthsSafe(startDate, i);
+                if (termDate && paymentDate > termDate) paymentDate = new Date(termDate);
                 const dateStr = paymentDate.toLocaleDateString('ru-RU');
                 schedule.push({
                     period: i,
@@ -608,22 +646,27 @@
         }
 
         function generatePaymentScheduleText(amount, ratePercent, termDate, paymentOption) {
-            const term = new Date(termDate);
-            if (isNaN(term.getTime())) return '';
-            
-            const today = new Date();
-            const diffDays = Math.ceil((term - today) / (1000 * 60 * 60 * 24));
-            if (diffDays <= 0) return '';
-            
+            const term = parseDate(termDate);
+            if (!term) return '';
+
+            const startDate = new Date();
+            let diffDays = Math.ceil((term - startDate) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) diffDays = 30;
+
             const simpleInterest = calculateSimpleInterest(amount, ratePercent, diffDays);
-            const months = Math.max(1, Math.ceil(diffDays / 30));
+
+            let months = (term.getFullYear() - startDate.getFullYear()) * 12
+                       + (term.getMonth() - startDate.getMonth());
+            if (term.getDate() < startDate.getDate()) months--;
+            months = Math.max(1, months);
+
             const monthlyRate = ratePercent / 100 / 12;
-            
+
             let result = '\n\n--- ГРАФИК ПЛАТЕЖЕЙ ---\n';
             result += `Сумма займа: ${formatMoney(amount)}\n`;
             result += `Процентная ставка: ${ratePercent}% годовых\n`;
             result += `Срок: ${diffDays} дней (${months} мес.)\n\n`;
-            
+
             if (paymentOption === '1') {
                 result += `Единовременная выплата процентов в конце срока:\n`;
                 result += `Сумма процентов: ${formatMoney(simpleInterest)}\n`;
@@ -636,8 +679,8 @@
                 result += `Ежемесячный платёж: ${formatMoney(payment)}\n`;
                 result += `Всего выплат: ${formatMoney(totalPayment)}\n`;
                 result += `Итого процентов: ${formatMoney(totalInterest)}\n\n`;
-                
-                const schedule = generatePaymentSchedule(amount, ratePercent, months, today, 'annuity');
+
+                const schedule = generatePaymentSchedule(amount, ratePercent, months, startDate, 'annuity', term);
                 result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
                 result += `--|------------|-------------|---------------|------------|---------------\n`;
                 for (const p of schedule) {
@@ -649,21 +692,21 @@
                 result += `Дифференцированные платежи:\n\n`;
                 result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
                 result += `--|------------|-------------|---------------|------------|---------------\n`;
-                
+
                 for (let i = 1; i <= months; i++) {
                     const remaining = amount - principalPart * (i - 1);
                     const interest = remaining * monthlyRate;
                     const payment = principalPart + interest;
                     totalInterest += interest;
-                    const paymentDate = new Date(today);
-                    paymentDate.setMonth(paymentDate.getMonth() + i);
+                    let paymentDate = addMonthsSafe(startDate, i);
+                    if (paymentDate > term) paymentDate = new Date(term);
                     const dateStr = paymentDate.toLocaleDateString('ru-RU');
                     result += `${String(i).padStart(2)} | ${dateStr.padEnd(10)} | ${formatMoney(payment).padEnd(11)} | ${formatMoney(principalPart).padEnd(13)} | ${formatMoney(interest).padEnd(10)} | ${formatMoney(remaining - principalPart)}\n`;
                 }
                 result += `\nИтого процентов: ${formatMoney(totalInterest)}\n`;
                 result += `Итого к возврату: ${formatMoney(amount + totalInterest)}\n`;
             }
-            
+
             return result;
         }
 
@@ -927,11 +970,6 @@
                     `;
             }
             resultDocument.insertAdjacentHTML('afterend', legalHtml);
-            
-            // Добавляем график платежей, если он есть
-            if (currentData.paymentSchedule) {
-                resultDocument.innerText += currentData.paymentSchedule;
-            }
         }
 
         function handleError(errorMessage, fullResponse = null) {
@@ -1022,8 +1060,37 @@
 
                 if (data.error) handleError(data.error, data);
                 else if (data.is_complete) {
+                    // Генерируем график платежей ПЕРЕД показом результата
+                    if (currentScenarioType === 'loan' || currentScenarioType === 'receipt_advanced') {
+                        const amount = currentData.amount;
+                        const rate = currentData.interest_rate;
+                        const termDate = currentData.return_date || currentData.term;
+                        const paymentOption = currentData.payment_option;
+
+                        console.log('checkAndShowCalculator called', { amount, rate, termDate, paymentOption, current_step: data.current_step });
+
+                        if (amount && rate && termDate && paymentOption) {
+                            const cleanAmount = parseMoney(amount);
+                            const cleanRate = parsePercent(rate);
+                            const parsedDate = parseDate(termDate);
+
+                            if (!isNaN(cleanAmount) && !isNaN(cleanRate) && parsedDate) {
+                                console.log('Generating payment schedule with:', { cleanAmount, cleanRate, parsedDate, paymentOption });
+                                const scheduleText = generatePaymentScheduleText(cleanAmount, cleanRate, parsedDate, paymentOption);
+                                currentData.paymentSchedule = scheduleText;
+                                console.log('Payment schedule generated:', scheduleText);
+                            } else {
+                                console.warn('Invalid data for payment schedule', { cleanAmount, cleanRate, parsedDate });
+                            }
+                        }
+                    }
+
                     if (data.document) {
-                        showResult(data.document);
+                        let docText = data.document;
+                        if (currentData.paymentSchedule) {
+                            docText += currentData.paymentSchedule;
+                        }
+                        showResult(docText);
             } else if (fullResponse && fullResponse.field_type === 'post_edit_choice') {
                 // Post-edit choice: edit another or return to preview
                 answerInput.style.display = 'none';
@@ -1056,61 +1123,14 @@
                 questionArea.parentNode.insertBefore(doneBtn, documentArea);
                 stepInfo.innerText = `Сценарий: ${currentScenarioType} | после редактирования | session: ${currentSessionId ?? '—'}`;
             } else {
-                        showDocument(data.document, data);
+                        let docText = data.document;
+                        if (currentData.paymentSchedule) {
+                            docText += currentData.paymentSchedule;
+                        }
+                        showDocument(docText, data);
                     }
                 }
                 else showQuestion(data.question, data.current_step, data);
-
-                // Генерируем график платежей, если выбран вариант погашения
-                if (currentScenarioType === 'loan' || currentScenarioType === 'receipt_advanced') {
-                    const amount = currentData.amount;
-                    let rate = currentData.interest_rate;
-                    const termDate = currentData.return_date || currentData.term;
-                    const paymentOption = currentData.payment_option;
-                    
-                    console.log('checkAndShowCalculator called', { amount, rate, termDate, paymentOption, current_step: data.current_step });
-                    
-                    // Если есть все данные и выбран вариант погашения — генерируем график
-                    if (amount && rate && termDate && paymentOption) {
-                        // Преобразуем сумму из строки с пробелами в число
-                        let cleanAmount = amount;
-                        if (typeof amount === 'string') {
-                            cleanAmount = parseFloat(amount.replace(/\s/g, '').replace(',', '.'));
-                        } else {
-                            cleanAmount = parseFloat(amount);
-                        }
-                        
-                        // Извлекаем число из ставки (например "10%" -> 10)
-                        let cleanRate = rate;
-                        if (typeof rate === 'string') {
-                            cleanRate = parseFloat(rate.replace('%', '').replace(',', '.'));
-                        } else {
-                            cleanRate = parseFloat(rate);
-                        }
-                        
-                        // Парсим дату
-                        let parsedDate = null;
-                        if (typeof termDate === 'string') {
-                            if (termDate.includes('.')) {
-                                const parts = termDate.split('.');
-                                parsedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                            } else {
-                                parsedDate = new Date(termDate);
-                            }
-                        } else {
-                            parsedDate = new Date(termDate);
-                        }
-                        
-                        if (!isNaN(parsedDate.getTime()) && !isNaN(cleanAmount) && !isNaN(cleanRate)) {
-                            console.log('Generating payment schedule with:', { cleanAmount, cleanRate, parsedDate, paymentOption });
-                            const scheduleText = generatePaymentScheduleText(cleanAmount, cleanRate, parsedDate, paymentOption);
-                            currentData.paymentSchedule = scheduleText;
-                            console.log('Payment schedule generated:', scheduleText);
-                        } else {
-                            console.warn('Invalid data for payment schedule', { cleanAmount, cleanRate, parsedDate });
-                        }
-                    }
-                }
 
                 answerInput.value = '';
             } catch (err) {
