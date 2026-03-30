@@ -361,6 +361,113 @@
             background: #254e70;
         }
 
+        .data-mgmt {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #E0E4E8;
+            text-align: center;
+        }
+
+        .data-mgmt-hint {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 12px;
+        }
+
+        .data-mgmt-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-save-data {
+            background: transparent;
+            color: var(--accent-teal);
+            border: 1px solid var(--accent-teal);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-save-data:hover {
+            background: var(--accent-teal);
+            color: white;
+        }
+
+        .btn-erase-data {
+            background: transparent;
+            color: #C0392B;
+            border: 1px solid #E6B0AA;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-erase-data:hover {
+            background: #C0392B;
+            color: white;
+            border-color: #C0392B;
+        }
+
+        .autofill-bar {
+            background: #F0FAF8;
+            border: 1px solid var(--accent-teal);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .autofill-bar-text {
+            flex: 1;
+            color: #333;
+        }
+
+        .autofill-bar-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn-autofill-apply {
+            background: var(--accent-teal);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-autofill-apply:hover {
+            background: #3a8a96;
+        }
+
+        .btn-autofill-dismiss {
+            background: transparent;
+            color: var(--text-gray);
+            border: 1px solid #D0D5DD;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-autofill-dismiss:hover {
+            background: #F0F0F0;
+        }
+
         .step-info {
             font-size: 12px;
             color: var(--text-gray);
@@ -394,7 +501,7 @@
         @media print {
             body { background: white; padding: 0; }
             .container { box-shadow: none; max-width: 100%; padding: 20px; }
-            .header, #selectorBlock, #scenarioPanel, .result-actions, .step-info, .debug-area { display: none !important; }
+            .header, #selectorBlock, #scenarioPanel, .result-actions, .data-mgmt, .step-info, .debug-area { display: none !important; }
             #resultPanel { display: block !important; margin: 0; padding: 0; border: none; }
             .result-header { font-size: 20px; margin-bottom: 12px; }
             .result-document { border: none; max-height: none; overflow: visible; padding: 0; font-size: 14px; }
@@ -543,6 +650,13 @@
                     <button id="backBtn" class="btn-secondary">Назад</button>
                 </div>
             </div>
+            <div id="autofillBar" class="autofill-bar" style="display:none;">
+                <span class="autofill-bar-text">Найдены сохранённые данные для этого типа документа. Заполнить автоматически?</span>
+                <div class="autofill-bar-actions">
+                    <button id="autofillApplyBtn" class="btn-autofill-apply">Да, заполнить</button>
+                    <button id="autofillDismissBtn" class="btn-autofill-dismiss">Нет</button>
+                </div>
+            </div>
             <div id="questionArea" class="question-area">Вопрос будет здесь</div>
             <div class="answer-area">
                 <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ..." autocomplete="off">
@@ -567,6 +681,13 @@
                 <button id="saveBtn" class="btn-result">Сохранить</button>
                 <button id="newDocBtn" class="btn-result">Новый документ</button>
             </div>
+            <div class="data-mgmt">
+                <div class="data-mgmt-hint">Вы можете сохранить введённые данные для следующего заполнения или удалить их из системы для приватности.</div>
+                <div class="data-mgmt-actions">
+                    <button id="saveDataBtn" class="btn-save-data">Сохранить данные для следующего заполнения</button>
+                    <button id="eraseDataBtn" class="btn-erase-data">Стереть все данные</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -586,6 +707,7 @@
         let isLoading = false;
         let currentFieldType = null;
         let currentData = {};
+        let currentStep = null;
 
         // Нормализаторы входных данных
         function parseMoney(value) {
@@ -787,6 +909,7 @@
         const resultPanel = document.getElementById('resultPanel');
         const resultDocument = document.getElementById('resultDocument');
         const newDocBtn = document.getElementById('newDocBtn');
+        const autofillBar = document.getElementById('autofillBar');
 
         // Удаляем debug-блок, если DEBUG = false
         if (!DEBUG && debugArea) debugArea.remove();
@@ -798,8 +921,15 @@
             resultDocument.innerText = '';
             currentSessionId = null;
             currentScenarioType = null;
+            currentStep = null;
             isComplete = false;
             isLoading = false;
+            autofillData = null;
+            autofillEnabled = false;
+            lastAutofillStep = null;
+            lastAutofillValue = null;
+            stuckStep = null;
+            autofillBar.style.display = 'none';
             answerInput.value = '';
             documentArea.style.display = 'none';
             documentArea.innerText = '';
@@ -822,6 +952,12 @@
             scenarioTitle.innerText = name;
             currentSessionId = null;
             isComplete = false;
+            currentStep = null;
+            autofillData = null;
+            autofillEnabled = false;
+            lastAutofillStep = null;
+            lastAutofillValue = null;
+            stuckStep = null;
             answerInput.value = '';
             documentArea.style.display = 'none';
             documentArea.innerText = '';
@@ -838,6 +974,7 @@
         }
 
         function showQuestion(question, step, fullResponse = null) {
+            currentStep = step || null;
             questionArea.innerText = question ?? 'Ошибка: пустой вопрос от сервера';
             sendBtn.disabled = false;
             answerInput.disabled = false;
@@ -1049,7 +1186,10 @@
                 console.log('Init response:', { session: currentSessionId, step: data.current_step, data });
                 if (data.is_complete) showDocument(data.document, data);
                 else if (data.error) handleError(data.error, data);
-                else showQuestion(data.question, data.current_step, data);
+                else {
+                    showQuestion(data.question, data.current_step, data);
+                    tryShowAutofillPrompt();
+                }
             } catch (err) {
                 console.error(err);
                 handleError(err.message);
@@ -1319,6 +1459,191 @@
 
         newDocBtn.addEventListener('click', showSelector);
 
+        // Управление данными пользователя
+        const SAVE_PREFIX = 'projecttext_saved_';
+        const EXCLUDE_KEYS = new Set(['paymentSchedule', 'passport', 'contract_number', 'days', 'notice_days']);
+
+        function getSavedData(scenarioType) {
+            try {
+                const raw = localStorage.getItem(SAVE_PREFIX + scenarioType);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) { return null; }
+        }
+
+        function saveDataForNextFill() {
+            if (!currentScenarioType || !Object.keys(currentData).length) return;
+            const clean = {};
+            for (const [k, v] of Object.entries(currentData)) {
+                if (EXCLUDE_KEYS.has(k)) continue;
+                if (v !== null && v !== undefined && v !== '') clean[k] = v;
+            }
+            localStorage.setItem(SAVE_PREFIX + currentScenarioType, JSON.stringify(clean));
+            const btn = document.getElementById('saveDataBtn');
+            if (btn) { btn.textContent = 'Данные сохранены'; btn.disabled = true; }
+        }
+
+        function eraseAllData() {
+            if (!confirm('Вы уверены? Все введённые данные будут удалены без возможности восстановления.')) return;
+            currentData = {};
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(SAVE_PREFIX)) localStorage.removeItem(key);
+            }
+            if (currentSessionId) {
+                fetch(`${API_SESSION}/${currentSessionId}/reset`, { method: 'POST' }).catch(() => {});
+            }
+            currentSessionId = null;
+            currentScenarioType = null;
+            isComplete = false;
+            showSelector();
+        }
+
+        document.getElementById('saveDataBtn').addEventListener('click', saveDataForNextFill);
+        document.getElementById('eraseDataBtn').addEventListener('click', eraseAllData);
+
+        // Автозаполнение
+        let autofillData = null;
+        let autofillEnabled = false;
+        let lastAutofillStep = null;
+        let lastAutofillValue = null;
+        let stuckStep = null;
+
+        document.getElementById('autofillApplyBtn').addEventListener('click', () => {
+            autofillEnabled = true;
+            autofillBar.style.display = 'none';
+            tryAutofillCurrentStep();
+        });
+
+        document.getElementById('autofillDismissBtn').addEventListener('click', () => {
+            autofillData = null;
+            autofillEnabled = false;
+            lastAutofillStep = null;
+            lastAutofillValue = null;
+            stuckStep = null;
+            autofillBar.style.display = 'none';
+        });
+
+        function tryShowAutofillPrompt() {
+            if (!currentScenarioType) return;
+            const saved = getSavedData(currentScenarioType);
+            if (saved && Object.keys(saved).length > 0) {
+                autofillData = saved;
+                autofillEnabled = false;
+                autofillBar.style.display = 'flex';
+            } else {
+                autofillBar.style.display = 'none';
+            }
+        }
+
+        const STEP_TO_KEY = {
+            'ask_receiver_fio': 'fio_receiver',
+            'ask_sender_fio': 'fio_sender',
+            'ask_lender': 'lender',
+            'ask_borrower': 'borrower',
+            'ask_amount': 'amount',
+            'ask_date': 'date',
+            'ask_return_date': 'return_date',
+            'ask_term': 'term',
+            'ask_interest_rate': 'interest_rate',
+            'ask_payment_option': 'payment_option',
+            'ask_city': 'city',
+            'ask_purpose': 'purpose',
+            'ask_penalty': 'penalty',
+            'ask_repayment_order': 'repayment_order',
+            'ask_collateral': 'collateral',
+            'ask_lender_passport_series': 'lender_passport_series',
+            'ask_lender_passport_number': 'lender_passport_number',
+            'ask_lender_passport_issued_by': 'lender_passport_issued_by',
+            'ask_lender_passport_date': 'lender_passport_date',
+            'ask_lender_passport_code': 'lender_passport_code',
+            'ask_borrower_passport_series': 'borrower_passport_series',
+            'ask_borrower_passport_number': 'borrower_passport_number',
+            'ask_borrower_passport_issued_by': 'borrower_passport_issued_by',
+            'ask_borrower_passport_date': 'borrower_passport_date',
+            'ask_borrower_passport_code': 'borrower_passport_code',
+            'ask_passport_series': 'passport_series',
+            'ask_passport_number': 'passport_number',
+            'ask_passport_issued_by': 'passport_issued_by',
+            'ask_passport_date': 'passport_date',
+            'ask_passport_code': 'passport_code',
+        };
+
+        function getAutofillValueForStep(stepName, data) {
+            if (!stepName || !data) return null;
+            const mapped = STEP_TO_KEY[stepName];
+            if (mapped && data[mapped] !== undefined && data[mapped] !== null && data[mapped] !== '') {
+                console.log(`[autofill] step=${stepName} → mappedKey=${mapped}, value="${data[mapped]}"`);
+                return data[mapped];
+            }
+            if (stepName.startsWith('ask_')) {
+                const fallback = stepName.slice(4);
+                if (data[fallback] !== undefined && data[fallback] !== null && data[fallback] !== '') {
+                    console.log(`[autofill] step=${stepName} → fallbackKey=${fallback}, value="${data[fallback]}"`);
+                    return data[fallback];
+                }
+            }
+            console.log(`[autofill] step=${stepName} → no saved value found`);
+            return null;
+        }
+
+        function normalizeAutofillValue(stepName, value) {
+            const s = String(value);
+            if (stepName === 'ask_amount' || stepName.includes('amount')) {
+                return s.replace(/[\s\u00A0\u202F]/g, '').replace(',', '.');
+            }
+            return s;
+        }
+
+        function tryAutofillCurrentStep() {
+            if (!autofillEnabled || !autofillData || !currentStep) return;
+            if (isLoading) return;
+            if (currentStep === stuckStep) {
+                console.log(`[autofill] step=${currentStep} is stuck, skipping`);
+                return;
+            }
+            const rawValue = getAutofillValueForStep(currentStep, autofillData);
+            if (rawValue === null) return;
+            const value = normalizeAutofillValue(currentStep, rawValue);
+            if (String(rawValue) !== value) {
+                console.log(`[autofill] step=${currentStep} rawValue="${rawValue}" normalizedValue="${value}"`);
+            }
+            if (lastAutofillStep === currentStep && lastAutofillValue === value) {
+                console.log(`[autofill] step=${currentStep} did not advance after value="${value}", stopping autofill for this step`);
+                stuckStep = currentStep;
+                lastAutofillStep = null;
+                lastAutofillValue = null;
+                return;
+            }
+            lastAutofillStep = currentStep;
+            lastAutofillValue = value;
+            const displayNone = answerInput.style.display === 'none';
+            if (displayNone) {
+                const choiceBtns = document.querySelectorAll('#choiceOptions .choice-btn');
+                if (choiceBtns.length > 0) {
+                    const valStr = String(value);
+                    for (const btn of choiceBtns) {
+                        if (btn.textContent.trim() === String(valStr) || btn.dataset.value === valStr) {
+                            console.log(`[autofill] clicking choice button (text match): "${btn.textContent.trim()}"`);
+                            btn.click();
+                            return;
+                        }
+                    }
+                    const match = valStr.match(/^(\d+)/);
+                    if (match && parseInt(match[1]) <= choiceBtns.length) {
+                        console.log(`[autofill] clicking choice button #${match[1]}`);
+                        choiceBtns[parseInt(match[1]) - 1].click();
+                        return;
+                    }
+                    console.log(`[autofill] no matching choice button for value="${valStr}"`);
+                    return;
+                }
+            } else {
+                console.log(`[autofill] filling input with "${value}", auto-submitting`);
+                answerInput.value = value;
+                setTimeout(() => { if (!isLoading) sendAnswer(); }, 300);
+            }
+        }
+
         // Preview actions for receipt_simple
         const previewConfirmBtn = document.createElement('button');
         const previewEditBtn = document.createElement('button');
@@ -1493,6 +1818,9 @@
         const originalShowQuestion = showQuestion;
         showQuestion = (question, step, fullResponse) => {
             updateUIForPreview(question, step, fullResponse);
+            if (autofillEnabled && autofillData) {
+                setTimeout(tryAutofillCurrentStep, 350);
+            }
         };
 
         // Старт
