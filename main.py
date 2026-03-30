@@ -32,8 +32,12 @@ class AgentResponse(BaseModel):
     is_complete: bool = False
     question: Optional[str] = None
     document: Optional[str] = None
+    error: Optional[str] = None
     session_id: str
     current_step: Optional[str] = None
+    optional: bool = False
+    field_type: Optional[str] = None
+    current_value: Optional[str] = None
 
 class ScenarioRequest(BaseModel):
     session_id: str
@@ -97,25 +101,9 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     
     # Если есть ответ - обрабатываем его
     if request.answer and request.answer != "":
-        result = scenario.process_answer(request.answer)
+        scenario.process_answer(request.answer)
         
-        # Если вернулась ошибка валидации - возвращаем её как вопрос
-        if result and is_error_response(result):
-            return AgentResponse(
-                question=result,
-                session_id=session_id,
-                current_step=scenario.get_current_step()
-            )
-        
-        # Если есть result (следующий вопрос) - возвращаем его
-        if result:
-            return AgentResponse(
-                question=result,
-                session_id=session_id,
-                current_step=scenario.get_current_step()
-            )
-        
-        # Если result None - проверяем завершён ли сценарий
+        # Сразу проверяем завершение
         if scenario.is_complete():
             document = scenario.generate_document(template_path)
             return AgentResponse(
@@ -125,12 +113,22 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
                 current_step="done"
             )
         
-        # Fallback - получаем следующий вопрос
+        # Если не завершён, получаем следующий вопрос
         next_question = scenario.get_next_question()
+        cv = None
+        if getattr(scenario, '_return_to_preview', False):
+            idx = scenario._current_index
+            if 0 <= idx < len(scenario._steps):
+                step = scenario._steps[idx]
+                if step.data_key and step.data_key in scenario.data:
+                    cv = str(scenario.data[step.data_key])
         return AgentResponse(
             question=next_question,
             session_id=session_id,
-            current_step=scenario.get_current_step()
+            current_step=scenario.get_current_step(),
+            optional=getattr(scenario, 'is_current_optional', lambda: False)(),
+            field_type=getattr(scenario, 'get_current_field_type', lambda: None)(),
+            current_value=cv,
         )
     
     # Первый вызов без ответа - инициализируем сценарий
@@ -143,7 +141,9 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     return AgentResponse(
         question=question,
         session_id=session_id,
-        current_step=scenario.get_current_step()
+        current_step=scenario.get_current_step(),
+        optional=getattr(scenario, 'is_current_optional', lambda: False)(),
+        field_type=getattr(scenario, 'get_current_field_type', lambda: None)()
     )
 
 @app.post("/api/session/{session_id}/reset")

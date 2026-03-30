@@ -234,6 +234,27 @@
             cursor: not-allowed;
         }
 
+        .btn-skip {
+            background: transparent;
+            color: var(--text-gray);
+            border: 1px solid #D0D5DD;
+            padding: 0 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-skip:hover {
+            border-color: var(--text-gray);
+            color: var(--text-dark);
+        }
+
+        .btn-skip.hidden {
+            display: none;
+        }
+
         .document-area {
             margin-top: 30px;
             background: #F8FAFE;
@@ -245,6 +266,56 @@
             max-height: 500px;
             overflow-y: auto;
             border: 1px solid #E0E4E8;
+        }
+
+        .result-panel {
+            display: none;
+            margin-top: 20px;
+            border-top: 1px solid #E8ECEF;
+            padding-top: 30px;
+        }
+
+        .result-header {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .result-document {
+            background: #F8FAFE;
+            border-radius: 16px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #E0E4E8;
+            margin-bottom: 20px;
+        }
+
+        .result-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-result {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-result:hover {
+            background: #254e70;
         }
 
         .step-info {
@@ -275,6 +346,15 @@
 
         .container, .card-btn, .scenario-panel {
             animation: fadeIn 0.6s ease-out;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; max-width: 100%; padding: 20px; }
+            .header, #selectorBlock, #scenarioPanel, .result-actions, .step-info, .debug-area { display: none !important; }
+            #resultPanel { display: block !important; margin: 0; padding: 0; border: none; }
+            .result-header { font-size: 20px; margin-bottom: 12px; }
+            .result-document { border: none; max-height: none; overflow: visible; padding: 0; font-size: 14px; }
         }
 
         @media (max-width: 600px) {
@@ -332,28 +412,58 @@
             <div id="questionArea" class="question-area">Вопрос будет здесь</div>
             <div class="answer-area">
                 <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ..." autocomplete="off">
+                <button id="skipBtn" class="btn-skip hidden">Пропустить</button>
                 <button id="sendBtn" class="btn-primary">Отправить</button>
             </div>
             <div id="documentArea" class="document-area" style="display: none;"></div>
             <div id="stepInfo" class="step-info"></div>
             <div id="debugArea" class="debug-area" style="display: none;">Debug: ожидание данных</div>
         </div>
+
+        <!-- Блок результата -->
+        <div id="resultPanel" class="result-panel">
+            <div class="result-header">Документ готов</div>
+            <div id="resultDocument" class="result-document"></div>
+            <div class="result-actions">
+                <button id="printBtn" class="btn-result">Печать / PDF</button>
+                <button id="saveBtn" class="btn-result">Сохранить</button>
+                <button id="newDocBtn" class="btn-result">Новый документ</button>
+            </div>
+        </div>
     </div>
 
     <script>
         // Настройка API - использовать локальный сервер
-        window.API_URL = 'http://localhost:8000';
+        window.API_URL = 'http://127.0.0.1:8000';
         
         // Настройки API (можно переопределить через window.API_URL)
         const API_BASE = (window.API_URL || window.location.origin) + '/api/scenario';
         const API_SESSION = (window.API_URL || window.location.origin) + '/api/session';
-        const DEBUG = true;   // при проде установить false
+        const DEBUG = false;
 
         let currentSessionId = null;
         let currentScenarioType = null;
         let currentScenarioName = '';
         let isComplete = false;
         let isLoading = false;
+        let currentFieldType = null;
+
+        // Перехват fetch для логирования (только в debug-режиме)
+        const originalFetch = window.fetch;
+        if (DEBUG) {
+            window.fetch = function(...args) {
+                console.log('\u{1F4E4} \u0417\u0430\u043F\u0440\u043E\u0441:', args[0], JSON.parse(args[1]?.body || '{}'));
+                return originalFetch(...args).then(r => {
+                    r.clone().json().then(data => {
+                        console.log('\u{1F4E5} \u041E\u0442\u0432\u0435\u0442:', data);
+                        console.log('   - is_complete:', data.is_complete);
+                        console.log('   - question:', data.question);
+                        console.log('   - current_step:', data.current_step);
+                    }).catch(() => {});
+                    return r;
+                });
+            };
+        }
 
         // Элементы DOM
         const selectorBlock = document.getElementById('selectorBlock');
@@ -362,11 +472,15 @@
         const questionArea = document.getElementById('questionArea');
         const answerInput = document.getElementById('answerInput');
         const sendBtn = document.getElementById('sendBtn');
+        const skipBtn = document.getElementById('skipBtn');
         const resetBtn = document.getElementById('resetBtn');
         const backBtn = document.getElementById('backBtn');
         const documentArea = document.getElementById('documentArea');
         const stepInfo = document.getElementById('stepInfo');
         const debugArea = document.getElementById('debugArea');
+        const resultPanel = document.getElementById('resultPanel');
+        const resultDocument = document.getElementById('resultDocument');
+        const newDocBtn = document.getElementById('newDocBtn');
 
         // Удаляем debug-блок, если DEBUG = false
         if (!DEBUG && debugArea) debugArea.remove();
@@ -374,6 +488,8 @@
         function showSelector() {
             selectorBlock.style.display = 'block';
             scenarioPanel.style.display = 'none';
+            resultPanel.style.display = 'none';
+            resultDocument.innerText = '';
             currentSessionId = null;
             currentScenarioType = null;
             isComplete = false;
@@ -383,6 +499,8 @@
             documentArea.innerText = '';
             questionArea.innerText = '';
             stepInfo.innerText = '';
+            skipBtn.classList.add('hidden');
+            window.scrollTo(0, 0);
         }
 
         function showScenario(type, name) {
@@ -416,7 +534,25 @@
             const stepDisplay = step ? `Шаг: ${String(step)}` : '';
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | ${stepDisplay} | session: ${currentSessionId ?? '—'}`;
             isComplete = false;
+            currentFieldType = (fullResponse && fullResponse.field_type) || null;
             answerInput.focus();
+            if (fullResponse && fullResponse.optional) {
+                skipBtn.classList.remove('hidden');
+            } else {
+                skipBtn.classList.add('hidden');
+            }
+            if (fullResponse) logToDebug(fullResponse);
+        }
+
+        function showPreview(question, step, fullResponse = null) {
+            questionArea.innerText = question ?? 'Ошибка: пустой вопрос от сервера';
+            sendBtn.disabled = true;
+            answerInput.disabled = true;
+            documentArea.style.display = 'none';
+            const stepDisplay = step ? `Шаг: ${String(step)}` : '';
+            stepInfo.innerText = `Сценарий: ${currentScenarioType} | ${stepDisplay} | session: ${currentSessionId ?? '—'}`;
+            isComplete = false;
+            currentFieldType = (fullResponse && fullResponse.field_type) || null;
             if (fullResponse) logToDebug(fullResponse);
         }
 
@@ -426,9 +562,16 @@
             questionArea.innerText = 'Документ сформирован. Нажмите "Назад" для выбора другого документа.';
             sendBtn.disabled = true;
             answerInput.disabled = true;
+            skipBtn.classList.add('hidden');
             stepInfo.innerText = `Сценарий: ${currentScenarioType} | документ готов | session: ${currentSessionId ?? '—'}`;
             isComplete = true;
             if (fullResponse) logToDebug(fullResponse);
+        }
+
+        function showResult(docText) {
+            scenarioPanel.style.display = 'none';
+            resultPanel.style.display = 'block';
+            resultDocument.innerText = docText || 'Документ пуст';
         }
 
         function handleError(errorMessage, fullResponse = null) {
@@ -514,7 +657,44 @@
                 console.log('Answer response:', { session: currentSessionId, step: data.current_step, data });
 
                 if (data.error) handleError(data.error, data);
-                else if (data.is_complete) showDocument(data.document, data);
+                else if (data.is_complete) {
+                    if (data.document) {
+                        showResult(data.document);
+            } else if (fullResponse && fullResponse.field_type === 'post_edit_choice') {
+                // Post-edit choice: edit another or return to preview
+                answerInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+                if (previewConfirmBtn.parentNode) {
+                    previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
+                    previewEditBtn.parentNode.removeChild(previewEditBtn);
+                }
+                questionArea.innerText = question ?? 'Поле сохранено.';
+                const moreBtn = document.createElement('button');
+                moreBtn.className = 'edit-field-btn btn-primary';
+                moreBtn.style.cssText = 'margin:8px 8px 0 0;';
+                moreBtn.innerText = 'Редактировать еще поле';
+                moreBtn.addEventListener('click', () => {
+                    answerInput.value = '1';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'edit-field-btn btn-secondary';
+                doneBtn.style.cssText = 'margin-top:8px;';
+                doneBtn.innerText = 'Вернуться к просмотру';
+                doneBtn.addEventListener('click', () => {
+                    answerInput.value = '2';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                questionArea.parentNode.insertBefore(moreBtn, documentArea);
+                questionArea.parentNode.insertBefore(doneBtn, documentArea);
+                stepInfo.innerText = `Сценарий: ${currentScenarioType} | после редактирования | session: ${currentSessionId ?? '—'}`;
+            } else {
+                        showDocument(data.document, data);
+                    }
+                }
                 else showQuestion(data.question, data.current_step, data);
 
                 answerInput.value = '';
@@ -550,6 +730,45 @@
             }
         }
 
+        async function skipAnswer() {
+            if (isLoading || !currentSessionId || !currentScenarioType || isComplete) return;
+            isLoading = true;
+            sendBtn.disabled = true;
+            answerInput.disabled = true;
+            skipBtn.classList.add('hidden');
+            const originalButtonText = sendBtn.innerText;
+            sendBtn.innerText = '...';
+            questionArea.innerText = '⏳ Обработка...';
+
+            try {
+                const response = await fetch(`${API_BASE}/${currentScenarioType}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId, answer: 'пропустить' })
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.session_id && data.session_id !== currentSessionId) {
+                    currentSessionId = data.session_id;
+                }
+                if (data.error) handleError(data.error, data);
+                else if (data.is_complete) showDocument(data.document, data);
+                else showQuestion(data.question, data.current_step, data);
+                answerInput.value = '';
+            } catch (err) {
+                console.error(err);
+                handleError(err.message);
+            } finally {
+                isLoading = false;
+                sendBtn.disabled = false;
+                answerInput.disabled = false;
+                sendBtn.innerText = originalButtonText;
+                answerInput.focus();
+            }
+        }
+
         // Обработчики
         document.querySelectorAll('.card-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -561,10 +780,165 @@
 
         backBtn.addEventListener('click', showSelector);
         sendBtn.addEventListener('click', sendAnswer);
+        skipBtn.addEventListener('click', skipAnswer);
         resetBtn.addEventListener('click', resetSession);
         answerInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') sendAnswer();
         });
+
+        answerInput.addEventListener('input', () => {
+            if (currentFieldType !== 'date') return;
+            let digits = answerInput.value.replace(/\D/g, '');
+            let d = digits.slice(0, 2);
+            let m = digits.slice(2, 4);
+            let y = digits.slice(4);
+            if (y.length > 4) y = y.slice(0, 4);
+            if (y.length > 0 && y.length !== 2 && y.length !== 4) {
+                y = y.slice(0, 2);
+            }
+            let formatted = d;
+            if (m) formatted += '.' + m;
+            if (y) formatted += '.' + y;
+            answerInput.value = formatted;
+        });
+
+        answerInput.addEventListener('keydown', (e) => {
+            if (currentFieldType === 'date' && e.key === 'Backspace') {
+                const val = answerInput.value;
+                const pos = answerInput.selectionStart;
+                if (pos > 0 && val[pos - 1] === '.') {
+                    e.preventDefault();
+                    answerInput.value = val.slice(0, pos - 2) + val.slice(pos);
+                    answerInput.selectionStart = answerInput.selectionEnd = pos - 2;
+                }
+            }
+        });
+
+        // Результатные действия
+        const printBtn = document.getElementById('printBtn');
+        const saveBtn = document.getElementById('saveBtn');
+
+        printBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const text = resultDocument.innerText || resultDocument.textContent || '';
+            if (!text) return;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'document.txt';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 0);
+        });
+
+        newDocBtn.addEventListener('click', showSelector);
+
+        // Preview actions for receipt_simple
+        const previewConfirmBtn = document.createElement('button');
+        const previewEditBtn = document.createElement('button');
+        previewConfirmBtn.className = 'btn-result';
+        previewEditBtn.className = 'btn-result';
+        previewConfirmBtn.innerText = 'Подтвердить';
+        previewEditBtn.innerText = 'Редактировать';
+        previewConfirmBtn.style.marginRight = '12px';
+        previewEditBtn.style.marginRight = '12px';
+
+        previewConfirmBtn.addEventListener('click', () => {
+            answerInput.value = '1';
+            sendAnswer();
+        });
+
+        previewEditBtn.addEventListener('click', () => {
+            answerInput.value = '2';
+            sendAnswer();
+        });
+
+        // Detect preview state and show/hide input accordingly
+        function updateUIForPreview(question, step, fullResponse) {
+            // Remove edit buttons if present
+            document.querySelectorAll('.edit-field-btn').forEach(b => b.remove());
+            const editBackBtn = document.getElementById('editBackBtn');
+            if (editBackBtn) editBackBtn.remove();
+
+            if (fullResponse && fullResponse.field_type === 'preview') {
+                // Preview state: hide input, show buttons
+                answerInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+                // Insert preview buttons after question area
+                if (!previewConfirmBtn.parentNode) {
+                    questionArea.parentNode.insertBefore(previewConfirmBtn, documentArea);
+                    questionArea.parentNode.insertBefore(previewEditBtn, documentArea);
+                }
+                showPreview(question, step, fullResponse);
+            } else if (fullResponse && fullResponse.field_type === 'edit_select') {
+                // Edit select state: show clickable field buttons
+                answerInput.style.display = 'none';
+                sendBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+                if (previewConfirmBtn.parentNode) {
+                    previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
+                    previewEditBtn.parentNode.removeChild(previewEditBtn);
+                }
+                questionArea.innerText = question ?? 'Выберите поле';
+                const fieldLines = (question || '').split('\n').filter(l => l.trim().match(/^\s*\d+\./));
+                fieldLines.forEach(line => {
+                    const match = line.trim().match(/^(\d+)\.\s*(.+)/);
+                    if (match) {
+                        const btn = document.createElement('button');
+                        btn.className = 'edit-field-btn btn-secondary';
+                        btn.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;padding:10px 16px;';
+                        btn.innerText = match[2];
+                        btn.addEventListener('click', () => {
+                            answerInput.value = match[1];
+                            currentFieldType = null;
+                            sendAnswer();
+                        });
+                        questionArea.parentNode.insertBefore(btn, documentArea);
+                    }
+                });
+                const backBtn = document.createElement('button');
+                backBtn.id = 'editBackBtn';
+                backBtn.className = 'btn-secondary';
+                backBtn.style.cssText = 'margin-top:8px;';
+                backBtn.innerText = 'Назад к просмотру';
+                backBtn.addEventListener('click', () => {
+                    answerInput.value = 'назад';
+                    currentFieldType = null;
+                    sendAnswer();
+                });
+                questionArea.parentNode.insertBefore(backBtn, documentArea);
+                stepInfo.innerText = `Сценарий: ${currentScenarioType} | выбор поля | session: ${currentSessionId ?? '—'}`;
+            } else {
+                // Normal state: show input, hide buttons
+                answerInput.style.display = 'block';
+                sendBtn.style.display = 'inline-block';
+                skipBtn.style.display = 'inline-block';
+                // Remove preview buttons if present
+                if (previewConfirmBtn.parentNode) {
+                    previewConfirmBtn.parentNode.removeChild(previewConfirmBtn);
+                    previewEditBtn.parentNode.removeChild(previewEditBtn);
+                }
+                originalShowQuestion(question, step, fullResponse);
+                // Pre-fill current value if returning from edit
+                if (fullResponse && fullResponse.current_value) {
+                    answerInput.value = fullResponse.current_value;
+                }
+            }
+        }
+
+        // Override showQuestion to use preview detection
+        const originalShowQuestion = showQuestion;
+        showQuestion = (question, step, fullResponse) => {
+            updateUIForPreview(question, step, fullResponse);
+        };
 
         // Старт
         showSelector();
