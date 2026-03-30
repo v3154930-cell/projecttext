@@ -1068,7 +1068,10 @@
                 if (data.session_id && data.session_id !== currentSessionId) {
                     currentSessionId = data.session_id;
                 }
-                if (data.data) currentData = data.data;
+                if (data.data) {
+                    currentData = { ...currentData, ...data.data };
+                    console.log('Current data updated:', currentData);
+                }
                 console.log('Answer response:', { session: currentSessionId, step: data.current_step, data });
 
                 if (data.error) handleError(data.error, data);
@@ -1118,6 +1121,7 @@
                     const rate = currentData.interest_rate;
                     const termDate = currentData.term || currentData.return_date;
                     const paymentOption = currentData.payment_option;
+                    console.log('checkAndShowCalculator called', { amount, rate, termDate, paymentOption, current_step: data.current_step });
                     // Следующие шаги после выбора варианта погашения
                     const stepsAfterPayment = ['ask_payment_option', 'ask_penalty', 'ask_repayment_order', 'ask_repayment_method', 'ask_purpose', 'ask_collateral', 'ask_city'];
                     // Показываем калькулятор только после выбора варианта погашения
