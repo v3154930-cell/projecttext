@@ -23,12 +23,10 @@ class ReceiptSimpleScenario:
     
     def get_next_question(self) -> Optional[str]:
         if self.state == Step.START:
-            return None
-        elif self.state == Step.ASK_RECEIVER_FIO:
             return "Введите ФИО получателя (того, кто берет деньги):"
-        elif self.state == Step.ASK_PASSPORT:
+        elif self.state == Step.ASK_RECEIVER_FIO:
             return "Введите паспортные данные получателя (серия, номер, кем и когда выдан):"
-        elif self.state == Step.ASK_SENDER_FIO:
+        elif self.state == Step.ASK_PASSPORT:
             return "Введите ФИО передающего (того, кто дает деньги):"
         elif self.state == Step.ASK_SENDER_FIO:
             return "Введите сумму в рублях (только цифры):"
@@ -41,40 +39,33 @@ class ReceiptSimpleScenario:
         return None
     
     def process_answer(self, answer: str) -> Optional[str]:
-        # Защита: если сценарий завершен
         if self.state == Step.DONE:
             return None
         
         answer = answer.strip()
         
-        # Обработка в зависимости от текущего состояния
         if self.state == Step.START:
-            # Первый вызов - просто переходим к вопросу
-            self.state = Step.ASK_RECEIVER_FIO
-            return self.get_next_question()
-        
-        elif self.state == Step.ASK_RECEIVER_FIO:
             if not answer:
                 return "ФИО не может быть пустым. Введите ФИО получателя:"
             self.data['fio_receiver'] = answer
             self.state = Step.ASK_PASSPORT
             return self.get_next_question()
         
-        elif self.state == Step.ASK_PASSPORT:
+        if self.state == Step.ASK_RECEIVER_FIO:
             if not answer:
                 return "Паспортные данные не могут быть пустыми. Введите серию, номер, кем и когда выдан:"
             self.data['passport'] = answer
             self.state = Step.ASK_SENDER_FIO
             return self.get_next_question()
         
-        elif self.state == Step.ASK_SENDER_FIO:
+        if self.state == Step.ASK_SENDER_FIO:
             if not answer:
                 return "ФИО передающего не может быть пустым. Введите ФИО:"
             self.data['fio_sender'] = answer
             self.state = Step.ASK_AMOUNT
             return self.get_next_question()
         
-        elif self.state == Step.ASK_AMOUNT:
+        if self.state == Step.ASK_AMOUNT:
             try:
                 amount = int(float(answer.replace(',', '.')))
                 if amount <= 0:
@@ -85,21 +76,21 @@ class ReceiptSimpleScenario:
             self.state = Step.ASK_RETURN_DATE
             return self.get_next_question()
         
-        elif self.state == Step.ASK_RETURN_DATE:
+        if self.state == Step.ASK_RETURN_DATE:
             if not answer:
                 return "Введите срок возврата в формате ДД.ММ.ГГГГ (например: 25.12.2026):"
             self.data['return_date'] = answer
             self.state = Step.ASK_DATE
             return self.get_next_question()
         
-        elif self.state == Step.ASK_DATE:
+        if self.state == Step.ASK_DATE:
             if not answer:
                 return "Введите дату составления в формате ДД.ММ.ГГГГ:"
             self.data['date'] = answer
             self.state = Step.ASK_CITY
             return self.get_next_question()
         
-        elif self.state == Step.ASK_CITY:
+        if self.state == Step.ASK_CITY:
             if not answer:
                 return "Введите город составления расписки:"
             self.data['city'] = answer
@@ -115,7 +106,8 @@ class ReceiptSimpleScenario:
         with open(template_path, 'r', encoding='utf-8') as f:
             template = f.read()
         try:
-            return template.format(**self.data)
+            document = template.format(**self.data)
+            return document
         except KeyError as e:
             raise ValueError(f"Отсутствует необходимое поле для шаблона: {e}")
     
