@@ -383,6 +383,71 @@
             margin-bottom: 5px;
         }
 
+        .calc-block {
+            margin-top: 20px;
+            padding: 15px;
+            background: #F0F7F0;
+            border-left: 4px solid #4CAF50;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .calc-block h4 {
+            margin: 0 0 10px 0;
+            color: #2E5C8A;
+        }
+        .calc-row {
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .calc-row label {
+            font-weight: 600;
+            min-width: 180px;
+        }
+        .calc-input {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .calc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+        .calc-table th, .calc-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        .calc-table th {
+            background: #e0e0e0;
+            text-align: center;
+        }
+        .btn-calc {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .btn-calc:hover {
+            background: #45a049;
+        }
+        .btn-add-to-doc {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
         @media (max-width: 600px) {
             .container { padding: 24px; }
             .title { font-size: 26px; }
@@ -444,6 +509,10 @@
             <div id="documentArea" class="document-area" style="display: none;"></div>
             <div id="stepInfo" class="step-info"></div>
             <div id="debugArea" class="debug-area" style="display: none;">Debug: ожидание данных</div>
+            <div id="calcModal" class="calc-block" style="display: none;">
+                <h4>📊 Расчёт процентов и графика платежей</h4>
+                <div id="calcContent"></div>
+            </div>
         </div>
 
         <!-- Блок результата -->
@@ -473,6 +542,184 @@
         let isComplete = false;
         let isLoading = false;
         let currentFieldType = null;
+        let currentData = {};
+
+        // Функции расчёта
+        function calculateSimpleInterest(amount, ratePercent, days) {
+            return amount * (ratePercent / 100) * (days / 365);
+        }
+
+        function calculateAnnuityPayment(amount, ratePercentPerYear, months) {
+            const monthlyRate = ratePercentPerYear / 100 / 12;
+            if (monthlyRate === 0) return amount / months;
+            const annuityFactor = monthlyRate * Math.pow(1 + monthlyRate, months) / (Math.pow(1 + monthlyRate, months) - 1);
+            return amount * annuityFactor;
+        }
+
+        function calculateDifferentiatedPayment(amount, ratePercentPerYear, months, period) {
+            const monthlyRate = ratePercentPerYear / 100 / 12;
+            const principalPart = amount / months;
+            const remaining = amount - principalPart * (period - 1);
+            const interestPart = remaining * monthlyRate;
+            return principalPart + interestPart;
+        }
+
+        function generatePaymentSchedule(amount, ratePercentPerYear, months, startDate, paymentType) {
+            const schedule = [];
+            let remaining = amount;
+            const monthlyRate = ratePercentPerYear / 100 / 12;
+            const principalPerMonth = amount / months;
+            let paymentAmount = 0;
+            
+            if (paymentType === 'annuity') {
+                paymentAmount = calculateAnnuityPayment(amount, ratePercentPerYear, months);
+            }
+            
+            for (let i = 1; i <= months; i++) {
+                let interest, principal;
+                if (paymentType === 'annuity') {
+                    interest = remaining * monthlyRate;
+                    principal = paymentAmount - interest;
+                    remaining -= principal;
+                } else {
+                    interest = remaining * monthlyRate;
+                    principal = principalPerMonth;
+                    remaining -= principal;
+                    paymentAmount = principal + interest;
+                }
+                if (remaining < 0) remaining = 0;
+                const paymentDate = new Date(startDate);
+                paymentDate.setMonth(paymentDate.getMonth() + i);
+                const dateStr = paymentDate.toLocaleDateString('ru-RU');
+                schedule.push({
+                    period: i,
+                    date: dateStr,
+                    payment: paymentAmount,
+                    principal: principal,
+                    interest: interest,
+                    remaining: remaining
+                });
+            }
+            return schedule;
+        }
+
+        function formatMoney(value) {
+            return value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+        }
+
+        function showCalculator(amount, rate, termDate) {
+            const calcModal = document.getElementById('calcModal');
+            const calcContent = document.getElementById('calcContent');
+            
+            let term = new Date(termDate);
+            if (isNaN(term.getTime())) {
+                calcModal.style.display = 'none';
+                return;
+            }
+            const today = new Date();
+            const diffDays = Math.ceil((term - today) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) return;
+            
+            const simpleInterest = calculateSimpleInterest(amount, rate, diffDays);
+            
+            calcContent.innerHTML = `
+                <div class="calc-row">
+                    <label>Сумма займа:</label> <span>${formatMoney(amount)}</span>
+                </div>
+                <div class="calc-row">
+                    <label>Процентная ставка:</label> <span>${rate}% годовых</span>
+                </div>
+                <div class="calc-row">
+                    <label>Срок (дней):</label> <span>${diffDays} дней</span>
+                </div>
+                <div class="calc-row">
+                    <label>Простые проценты за весь срок:</label> <span>${formatMoney(simpleInterest)}</span>
+                </div>
+                <div class="calc-row">
+                    <label>Вариант погашения:</label>
+                    <select id="paymentTypeSelect">
+                        <option value="lump">Единовременно в конце срока</option>
+                        <option value="annuity">Ежемесячно (аннуитет)</option>
+                        <option value="diff">Ежемесячно (дифференцированный)</option>
+                    </select>
+                </div>
+                <div class="calc-row" id="monthsRow" style="display:none;">
+                    <label>Срок в месяцах:</label>
+                    <input type="number" id="monthsInput" class="calc-input" value="12" min="1" max="360">
+                </div>
+                <button id="calcBtn" class="btn-calc">Рассчитать график</button>
+                <div id="scheduleResult"></div>
+                <button id="addToDocBtn" class="btn-add-to-doc" style="display:none;">Добавить расчёт в документ</button>
+            `;
+            
+            const paymentTypeSelect = document.getElementById('paymentTypeSelect');
+            const monthsRow = document.getElementById('monthsRow');
+            const monthsInput = document.getElementById('monthsInput');
+            const calcBtn = document.getElementById('calcBtn');
+            const scheduleResult = document.getElementById('scheduleResult');
+            const addToDocBtn = document.getElementById('addToDocBtn');
+            
+            paymentTypeSelect.addEventListener('change', () => {
+                monthsRow.style.display = (paymentTypeSelect.value === 'lump') ? 'none' : 'flex';
+            });
+            
+            calcBtn.addEventListener('click', () => {
+                const paymentType = paymentTypeSelect.value;
+                let scheduleHtml = '';
+                let totalInterest = 0;
+                
+                if (paymentType === 'lump') {
+                    totalInterest = simpleInterest;
+                    scheduleHtml = `<p>Проценты выплачиваются единовременно в конце срока: ${formatMoney(totalInterest)}</p>`;
+                } else {
+                    const months = parseInt(monthsInput.value, 10);
+                    if (isNaN(months) || months < 1) {
+                        scheduleResult.innerHTML = '<p style="color:red;">Введите корректный срок в месяцах.</p>';
+                        return;
+                    }
+                    const startDate = new Date();
+                    const schedule = generatePaymentSchedule(amount, rate, months, startDate, paymentType);
+                    totalInterest = schedule.reduce((sum, p) => sum + p.interest, 0);
+                    scheduleHtml = `<table class="calc-table">
+                        <tr><th>№</th><th>Дата</th><th>Платёж</th><th>Основной долг</th><th>Проценты</th><th>Остаток долга</th></tr>`;
+                    for (const p of schedule) {
+                        scheduleHtml += `<tr>
+                            <td>${p.period}</td>
+                            <td>${p.date}</td>
+                            <td>${formatMoney(p.payment)}</td>
+                            <td>${formatMoney(p.principal)}</td>
+                            <td>${formatMoney(p.interest)}</td>
+                            <td>${formatMoney(p.remaining)}</td>
+                        </tr>`;
+                    }
+                    scheduleHtml += `<tr><td colspan="4"><strong>Итого процентов:</strong></td><td colspan="2"><strong>${formatMoney(totalInterest)}</strong></td></tr></table>`;
+                }
+                scheduleResult.innerHTML = scheduleHtml;
+                addToDocBtn.style.display = 'inline-block';
+            });
+            
+            addToDocBtn.addEventListener('click', () => {
+                const paymentType = paymentTypeSelect.value;
+                let calculationText = `\n\n--- РАСЧЁТ ПРОЦЕНТОВ ---\nСумма: ${formatMoney(amount)}\nСтавка: ${rate}% годовых\n`;
+                if (paymentType === 'lump') {
+                    calculationText += `Проценты выплачиваются единовременно: ${formatMoney(simpleInterest)}\n`;
+                } else {
+                    const months = parseInt(monthsInput.value, 10);
+                    calculationText += `Вариант погашения: ${paymentType === 'annuity' ? 'аннуитетные платежи' : 'дифференцированные платежи'}\nСрок: ${months} месяцев\n`;
+                    calculationText += scheduleResult.innerText || 'График платежей смотрите выше.\n';
+                }
+                const resultDoc = document.getElementById('resultDocument');
+                if (resultDoc) {
+                    resultDoc.innerText += calculationText;
+                } else {
+                    const docArea = document.getElementById('documentArea');
+                    if (docArea) docArea.innerText += calculationText;
+                }
+                calcModal.style.display = 'none';
+            });
+            
+            calcModal.style.display = 'block';
+        }
 
         // Перехват fetch для логирования (только в debug-режиме)
         const originalFetch = window.fetch;
@@ -671,6 +918,7 @@
             scenarioPanel.style.display = 'none';
             resultPanel.style.display = 'block';
             resultDocument.innerText = docText || 'Документ пуст';
+            document.getElementById('calcModal').style.display = 'none';
             
             // Удаляем старый правовой блок, если есть
             const existingLegal = document.getElementById('resultLegalInfo');
@@ -815,6 +1063,7 @@
                 if (data.session_id && data.session_id !== currentSessionId) {
                     currentSessionId = data.session_id;
                 }
+                if (data.data) currentData = data.data;
                 console.log('Answer response:', { session: currentSessionId, step: data.current_step, data });
 
                 if (data.error) handleError(data.error, data);
@@ -857,6 +1106,18 @@
                     }
                 }
                 else showQuestion(data.question, data.current_step, data);
+
+                // Показываем калькулятор, если есть все данные
+                if (currentScenarioType === 'loan' || currentScenarioType === 'receipt_advanced') {
+                    const amount = currentData.amount;
+                    const rate = currentData.interest_rate;
+                    const termDate = currentData.term || currentData.return_date;
+                    if (amount && rate && termDate && (data.current_step === 'ask_interest_rate' || data.current_step === 'ask_term' || data.current_step === 'ask_return_date')) {
+                        showCalculator(amount, rate, termDate);
+                    } else {
+                        document.getElementById('calcModal').style.display = 'none';
+                    }
+                }
 
                 answerInput.value = '';
             } catch (err) {
