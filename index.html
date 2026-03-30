@@ -607,123 +607,64 @@
             return value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
         }
 
-        function showCalculator(amount, rate, termDate, paymentOption) {
-            const calcModal = document.getElementById('calcModal');
-            const calcContent = document.getElementById('calcContent');
+        function generatePaymentScheduleText(amount, ratePercent, termDate, paymentOption) {
+            const term = new Date(termDate);
+            if (isNaN(term.getTime())) return '';
             
-            let term = new Date(termDate);
-            if (isNaN(term.getTime())) {
-                calcModal.style.display = 'none';
-                return;
-            }
             const today = new Date();
             const diffDays = Math.ceil((term - today) / (1000 * 60 * 60 * 24));
-            if (diffDays <= 0) return;
+            if (diffDays <= 0) return '';
             
-            const simpleInterest = calculateSimpleInterest(amount, rate, diffDays);
+            const simpleInterest = calculateSimpleInterest(amount, ratePercent, diffDays);
+            const months = Math.max(1, Math.ceil(diffDays / 30));
+            const monthlyRate = ratePercent / 100 / 12;
             
-            // Определяем выбранный вариант погашения
-            let selectedPaymentType = 'lump';
-            if (paymentOption === '2') selectedPaymentType = 'annuity';
-            else if (paymentOption === '3') selectedPaymentType = 'diff';
+            let result = '\n\n--- ГРАФИК ПЛАТЕЖЕЙ ---\n';
+            result += `Сумма займа: ${formatMoney(amount)}\n`;
+            result += `Процентная ставка: ${ratePercent}% годовых\n`;
+            result += `Срок: ${diffDays} дней (${months} мес.)\n\n`;
             
-            calcContent.innerHTML = `
-                <div class="calc-row">
-                    <label>Сумма займа:</label> <span>${formatMoney(amount)}</span>
-                </div>
-                <div class="calc-row">
-                    <label>Процентная ставка:</label> <span>${rate}% годовых</span>
-                </div>
-                <div class="calc-row">
-                    <label>Срок (дней):</label> <span>${diffDays} дней</span>
-                </div>
-                <div class="calc-row">
-                    <label>Простые проценты за весь срок:</label> <span>${formatMoney(simpleInterest)}</span>
-                </div>
-                <div class="calc-row">
-                    <label>Вариант погашения:</label>
-                    <select id="paymentTypeSelect">
-                        <option value="lump" ${selectedPaymentType === 'lump' ? 'selected' : ''}>Единовременно в конце срока</option>
-                        <option value="annuity" ${selectedPaymentType === 'annuity' ? 'selected' : ''}>Ежемесячно (аннуитет)</option>
-                        <option value="diff" ${selectedPaymentType === 'diff' ? 'selected' : ''}>Ежемесячно (дифференцированный)</option>
-                    </select>
-                </div>
-                <div class="calc-row" id="monthsRow" style="display:${selectedPaymentType === 'lump' ? 'none' : 'flex'};">
-                    <label>Срок в месяцах:</label>
-                    <input type="number" id="monthsInput" class="calc-input" value="12" min="1" max="360">
-                </div>
-                <button id="calcBtn" class="btn-calc">Рассчитать график</button>
-                <div id="scheduleResult"></div>
-                <button id="addToDocBtn" class="btn-add-to-doc" style="display:none;">Добавить расчёт в документ</button>
-            `;
-            
-            const paymentTypeSelect = document.getElementById('paymentTypeSelect');
-            const monthsRow = document.getElementById('monthsRow');
-            const monthsInput = document.getElementById('monthsInput');
-            const calcBtn = document.getElementById('calcBtn');
-            const scheduleResult = document.getElementById('scheduleResult');
-            const addToDocBtn = document.getElementById('addToDocBtn');
-            
-            paymentTypeSelect.addEventListener('change', () => {
-                monthsRow.style.display = (paymentTypeSelect.value === 'lump') ? 'none' : 'flex';
-            });
-            
-            calcBtn.addEventListener('click', () => {
-                const paymentType = paymentTypeSelect.value;
-                let scheduleHtml = '';
-                let totalInterest = 0;
+            if (paymentOption === '1') {
+                result += `Единовременная выплата процентов в конце срока:\n`;
+                result += `Сумма процентов: ${formatMoney(simpleInterest)}\n`;
+                result += `Итого к возврату: ${formatMoney(amount + simpleInterest)}\n`;
+            } else if (paymentOption === '2') {
+                const payment = calculateAnnuityPayment(amount, ratePercent, months);
+                const totalPayment = payment * months;
+                const totalInterest = totalPayment - amount;
+                result += `Аннуитетные платежи:\n`;
+                result += `Ежемесячный платёж: ${formatMoney(payment)}\n`;
+                result += `Всего выплат: ${formatMoney(totalPayment)}\n`;
+                result += `Итого процентов: ${formatMoney(totalInterest)}\n\n`;
                 
-                if (paymentType === 'lump') {
-                    totalInterest = simpleInterest;
-                    scheduleHtml = `<p>Проценты выплачиваются единовременно в конце срока: ${formatMoney(totalInterest)}</p>`;
-                } else {
-                    const months = parseInt(monthsInput.value, 10);
-                    if (isNaN(months) || months < 1) {
-                        scheduleResult.innerHTML = '<p style="color:red;">Введите корректный срок в месяцах.</p>';
-                        return;
-                    }
-                    const startDate = new Date();
-                    const schedule = generatePaymentSchedule(amount, rate, months, startDate, paymentType);
-                    totalInterest = schedule.reduce((sum, p) => sum + p.interest, 0);
-                    scheduleHtml = `<table class="calc-table">
-                        <tr><th>№</th><th>Дата</th><th>Платёж</th><th>Основной долг</th><th>Проценты</th><th>Остаток долга</th></tr>`;
-                    for (const p of schedule) {
-                        scheduleHtml += `<tr>
-                            <td>${p.period}</td>
-                            <td>${p.date}</td>
-                            <td>${formatMoney(p.payment)}</td>
-                            <td>${formatMoney(p.principal)}</td>
-                            <td>${formatMoney(p.interest)}</td>
-                            <td>${formatMoney(p.remaining)}</td>
-                        </tr>`;
-                    }
-                    scheduleHtml += `<tr><td colspan="4"><strong>Итого процентов:</strong></td><td colspan="2"><strong>${formatMoney(totalInterest)}</strong></td></tr></table>`;
+                const schedule = generatePaymentSchedule(amount, ratePercent, months, today, 'annuity');
+                result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
+                result += `--|------------|-------------|---------------|------------|---------------\n`;
+                for (const p of schedule) {
+                    result += `${String(p.period).padStart(2)} | ${p.date.padEnd(10)} | ${formatMoney(p.payment).padEnd(11)} | ${formatMoney(p.principal).padEnd(13)} | ${formatMoney(p.interest).padEnd(10)} | ${formatMoney(p.remaining)}\n`;
                 }
-                scheduleResult.innerHTML = scheduleHtml;
-                addToDocBtn.style.display = 'inline-block';
-            });
+            } else if (paymentOption === '3') {
+                const principalPart = amount / months;
+                let totalInterest = 0;
+                result += `Дифференцированные платежи:\n\n`;
+                result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
+                result += `--|------------|-------------|---------------|------------|---------------\n`;
+                
+                for (let i = 1; i <= months; i++) {
+                    const remaining = amount - principalPart * (i - 1);
+                    const interest = remaining * monthlyRate;
+                    const payment = principalPart + interest;
+                    totalInterest += interest;
+                    const paymentDate = new Date(today);
+                    paymentDate.setMonth(paymentDate.getMonth() + i);
+                    const dateStr = paymentDate.toLocaleDateString('ru-RU');
+                    result += `${String(i).padStart(2)} | ${dateStr.padEnd(10)} | ${formatMoney(payment).padEnd(11)} | ${formatMoney(principalPart).padEnd(13)} | ${formatMoney(interest).padEnd(10)} | ${formatMoney(remaining - principalPart)}\n`;
+                }
+                result += `\nИтого процентов: ${formatMoney(totalInterest)}\n`;
+                result += `Итого к возврату: ${formatMoney(amount + totalInterest)}\n`;
+            }
             
-            addToDocBtn.addEventListener('click', () => {
-                const paymentType = paymentTypeSelect.value;
-                let calculationText = `\n\n--- РАСЧЁТ ПРОЦЕНТОВ ---\nСумма: ${formatMoney(amount)}\nСтавка: ${rate}% годовых\n`;
-                if (paymentType === 'lump') {
-                    calculationText += `Проценты выплачиваются единовременно: ${formatMoney(simpleInterest)}\n`;
-                } else {
-                    const months = parseInt(monthsInput.value, 10);
-                    calculationText += `Вариант погашения: ${paymentType === 'annuity' ? 'аннуитетные платежи' : 'дифференцированные платежи'}\nСрок: ${months} месяцев\n`;
-                    calculationText += scheduleResult.innerText || 'График платежей смотрите выше.\n';
-                }
-                const resultDoc = document.getElementById('resultDocument');
-                if (resultDoc) {
-                    resultDoc.innerText += calculationText;
-                } else {
-                    const docArea = document.getElementById('documentArea');
-                    if (docArea) docArea.innerText += calculationText;
-                }
-                calcModal.style.display = 'none';
-            });
-            
-            calcModal.style.display = 'block';
+            return result;
         }
 
         // Перехват fetch для логирования (только в debug-режиме)
@@ -986,6 +927,11 @@
                     `;
             }
             resultDocument.insertAdjacentHTML('afterend', legalHtml);
+            
+            // Добавляем график платежей, если он есть
+            if (currentData.paymentSchedule) {
+                resultDocument.innerText += currentData.paymentSchedule;
+            }
         }
 
         function handleError(errorMessage, fullResponse = null) {
@@ -1115,7 +1061,7 @@
                 }
                 else showQuestion(data.question, data.current_step, data);
 
-                // Показываем калькулятор, если выбран вариант погашения
+                // Генерируем график платежей, если выбран вариант погашения
                 if (currentScenarioType === 'loan' || currentScenarioType === 'receipt_advanced') {
                     const amount = currentData.amount;
                     let rate = currentData.interest_rate;
@@ -1124,7 +1070,7 @@
                     
                     console.log('checkAndShowCalculator called', { amount, rate, termDate, paymentOption, current_step: data.current_step });
                     
-                    // Если есть все данные и выбран вариант погашения — показываем калькулятор
+                    // Если есть все данные и выбран вариант погашения — генерируем график
                     if (amount && rate && termDate && paymentOption) {
                         // Преобразуем сумму из строки с пробелами в число
                         let cleanAmount = amount;
@@ -1156,13 +1102,13 @@
                         }
                         
                         if (!isNaN(parsedDate.getTime()) && !isNaN(cleanAmount) && !isNaN(cleanRate)) {
-                            console.log('Showing calculator with:', { cleanAmount, cleanRate, parsedDate, paymentOption });
-                            showCalculator(cleanAmount, cleanRate, parsedDate, paymentOption);
+                            console.log('Generating payment schedule with:', { cleanAmount, cleanRate, parsedDate, paymentOption });
+                            const scheduleText = generatePaymentScheduleText(cleanAmount, cleanRate, parsedDate, paymentOption);
+                            currentData.paymentSchedule = scheduleText;
+                            console.log('Payment schedule generated:', scheduleText);
                         } else {
-                            console.warn('Invalid data for calculator', { cleanAmount, cleanRate, parsedDate });
+                            console.warn('Invalid data for payment schedule', { cleanAmount, cleanRate, parsedDate });
                         }
-                    } else {
-                        document.getElementById('calcModal').style.display = 'none';
                     }
                 }
 
