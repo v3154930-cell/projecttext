@@ -1,5 +1,9 @@
+import datetime
 from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, validate_passport, format_money, normalize_date, validate_date_after, normalize_percent, normalize_fio
-from framework.common_components import create_fio_step
+from framework.common_components import create_fio_step, create_passport_steps
+
+LENDER_PASSPORT_STEPS, LENDER_PASSPORT_ASSEMBLER = create_passport_steps("ask_lender_passport", "lender_passport")
+BORROWER_PASSPORT_STEPS, BORROWER_PASSPORT_ASSEMBLER = create_passport_steps("ask_borrower_passport", "borrower_passport")
 
 STEPS = [
     FieldStep(
@@ -12,12 +16,14 @@ STEPS = [
         data_key="lender",
         role_label="Займодавец",
     ),
+    *LENDER_PASSPORT_STEPS,
     create_fio_step(
         name="ask_borrower",
         question="Введите заемщика (ФИО или наименование организации):",
         data_key="borrower",
         role_label="Заемщик",
     ),
+    *BORROWER_PASSPORT_STEPS,
     FieldStep(
         name="ask_amount",
         question="Введите сумму займа в рублях (только цифры):",
@@ -93,6 +99,10 @@ STEPS = [
 class LoanScenario(BaseScenario):
     def __init__(self):
         super().__init__(steps=STEPS, template_path="templates/loan.txt")
+        self._preview_enabled = True
+        self._field_assemblers["lender_passport"] = LENDER_PASSPORT_ASSEMBLER
+        self._field_assemblers["borrower_passport"] = BORROWER_PASSPORT_ASSEMBLER
+        self.data["contract_number"] = f"ДЗ-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
 
     def reset(self):
         super().reset()
