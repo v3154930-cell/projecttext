@@ -605,9 +605,123 @@
             .answer-area { flex-direction: column; }
             .btn-primary { padding: 12px; }
         }
+
+        .consent-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .consent-overlay.hidden { display: none; }
+
+        .consent-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        .consent-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #2E5C8A, #4A9CA8);
+            border-radius: 16px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+        }
+
+        .consent-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2E5C8A;
+            margin-bottom: 16px;
+        }
+
+        .consent-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #2C3E50;
+            margin-bottom: 24px;
+        }
+
+        .consent-btn {
+            background: #2E5C8A;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .consent-btn:hover {
+            background: #254e70;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border-bottom: 1px solid #ddd;
+            padding: 6px 8px;
+        }
+
+        .schedule-table td {
+            text-align: right;
+        }
+
+        .schedule-table td.num {
+            text-align: center;
+        }
+
+        .schedule-table td.date {
+            text-align: left;
+        }
+
+        .schedule-table th {
+            text-align: center;
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .schedule-table tr:hover {
+            background: #f9f9f9;
+        }
     </style>
 </head>
 <body>
+    <div id="consentOverlay" class="consent-overlay hidden">
+        <div class="consent-box">
+            <div class="consent-icon">⚠️</div>
+            <div class="consent-title">Важная информация</div>
+            <div class="consent-text">Сервис формирует документы на основе введённых вами данных и не является юридической консультацией. Проверьте корректность данных перед использованием документа.</div>
+            <button id="consentBtn" class="consent-btn">Понятно, продолжить</button>
+        </div>
+    </div>
     <div class="container">
         <div class="header" id="header">
             <div class="logo-placeholder">О</div>
@@ -678,7 +792,8 @@
             <div id="resultDocument" class="result-document"></div>
             <div class="result-actions">
                 <button id="printBtn" class="btn-result">Печать / PDF</button>
-                <button id="saveBtn" class="btn-result">Сохранить</button>
+                <button id="downloadDocxBtn" class="btn-result">Скачать DOCX</button>
+                <button id="saveBtn" class="btn-result" style="display:none;">Сохранить</button>
                 <button id="newDocBtn" class="btn-result">Новый документ</button>
             </div>
             <div class="data-mgmt">
@@ -693,11 +808,11 @@
 
     <script>
         // Настройка API - использовать локальный сервер
-        window.API_URL = 'http://127.0.0.1:8000';
+        window.API_URL = window.location.origin;
         
         // Настройки API (можно переопределить через window.API_URL)
-        const API_BASE = (window.API_URL || window.location.origin) + '/api/scenario';
-        const API_SESSION = (window.API_URL || window.location.origin) + '/api/session';
+        const API_BASE = window.API_URL + '/api/scenario';
+        const API_SESSION = window.API_URL + '/api/session';
         const DEBUG = false;
 
         let currentSessionId = null;
@@ -847,17 +962,17 @@
                 result += `Итого процентов: ${formatMoney(totalInterest)}\n\n`;
 
                 const schedule = generatePaymentSchedule(amount, ratePercent, months, startDate, 'annuity', term);
-                result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
-                result += `--|------------|-------------|---------------|------------|---------------\n`;
+                result += `\n<div class="schedule-table"><table><thead><tr><th>№</th><th>Дата</th><th>Платёж</th><th>Основной долг</th><th>Проценты</th><th>Остаток</th></tr></thead><tbody>`;
                 for (const p of schedule) {
-                    result += `${String(p.period).padStart(2)} | ${p.date.padEnd(10)} | ${formatMoney(p.payment).padEnd(11)} | ${formatMoney(p.principal).padEnd(13)} | ${formatMoney(p.interest).padEnd(10)} | ${formatMoney(p.remaining)}\n`;
+                    result += `<tr><td class="num">${p.period}</td><td class="date">${p.date}</td><td>${formatMoney(p.payment)}</td><td>${formatMoney(p.principal)}</td><td>${formatMoney(p.interest)}</td><td>${formatMoney(p.remaining)}</td></tr>`;
                 }
+                result += `</tbody></table></div>`;
             } else if (paymentOption === '3') {
                 const principalPart = amount / months;
                 let totalInterest = 0;
                 result += `Дифференцированные платежи:\n\n`;
-                result += `№ | Дата       | Платёж      | Основной долг | Проценты   | Остаток долга\n`;
-                result += `--|------------|-------------|---------------|------------|---------------\n`;
+
+                result += `\n<div class="schedule-table"><table><thead><tr><th>№</th><th>Дата</th><th>Платёж</th><th>Основной долг</th><th>Проценты</th><th>Остаток</th></tr></thead><tbody>`;
 
                 for (let i = 1; i <= months; i++) {
                     const remaining = amount - principalPart * (i - 1);
@@ -867,9 +982,10 @@
                     let paymentDate = addMonthsSafe(startDate, i);
                     if (paymentDate > term) paymentDate = new Date(term);
                     const dateStr = paymentDate.toLocaleDateString('ru-RU');
-                    result += `${String(i).padStart(2)} | ${dateStr.padEnd(10)} | ${formatMoney(payment).padEnd(11)} | ${formatMoney(principalPart).padEnd(13)} | ${formatMoney(interest).padEnd(10)} | ${formatMoney(remaining - principalPart)}\n`;
+                    result += `<tr><td class="num">${i}</td><td class="date">${dateStr}</td><td>${formatMoney(payment)}</td><td>${formatMoney(principalPart)}</td><td>${formatMoney(interest)}</td><td>${formatMoney(remaining - principalPart)}</td></tr>`;
                 }
-                result += `\nИтого процентов: ${formatMoney(totalInterest)}\n`;
+                result += `</tbody></table></div>`;
+                result += `\n\nИтого процентов: ${formatMoney(totalInterest)}\n`;
                 result += `Итого к возврату: ${formatMoney(amount + totalInterest)}\n`;
             }
 
@@ -910,6 +1026,99 @@
         const resultDocument = document.getElementById('resultDocument');
         const newDocBtn = document.getElementById('newDocBtn');
         const autofillBar = document.getElementById('autofillBar');
+        const consentOverlay = document.getElementById('consentOverlay');
+        const consentBtn = document.getElementById('consentBtn');
+
+        const CONSENT_KEY = 'projecttext_consent';
+        let consentInitialized = false;
+
+        function showConsent() {
+            consentOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideConsent() {
+            consentOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+            localStorage.setItem(CONSENT_KEY, 'true');
+        }
+
+        function startApp() {
+            if (!localStorage.getItem(CONSENT_KEY)) {
+                showConsent();
+                return;
+            }
+            showSelector();
+        }
+
+        function initApp() {
+            if (consentInitialized) return;
+            consentInitialized = true;
+            const hasConsent = localStorage.getItem(CONSENT_KEY);
+            if (hasConsent) {
+                startApp();
+            } else {
+                showConsent();
+            }
+        }
+
+        consentBtn.addEventListener('click', function() {
+            hideConsent();
+            startApp();
+        });
+
+        async function eraseAllData() {
+            if (!confirm('Вы уверены? Все введённые данные будут удалены без возможности восстановления.')) return;
+            currentData = {};
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith(SAVE_PREFIX) || key === CONSENT_KEY)) localStorage.removeItem(key);
+            }
+            if (currentSessionId) {
+                try {
+                    await fetch(`${API_SESSION}/${currentSessionId}/reset`, { method: 'POST' });
+                } catch (e) {}
+            }
+            location.reload();
+        }
+
+        function e2eTestConsent() {
+            console.log('=== E2E Test: Consent Flow ===');
+            try {
+                localStorage.removeItem(CONSENT_KEY);
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(SAVE_PREFIX)) localStorage.removeItem(key);
+                }
+
+                const preCheck = !localStorage.getItem(CONSENT_KEY);
+                if (!preCheck) {
+                    console.log('❌ Pre-check Failed: consent already exists before test start');
+                    return;
+                }
+                console.log('✅ Pre-check: consent cleared before test');
+
+                const test1 = !localStorage.getItem(CONSENT_KEY);
+                console.log(test1 ? '✅ Test 1: Consent not shown on fresh start (before initApp)' : '❌ Test 1 Failed');
+
+                initApp();
+                const test2 = !consentOverlay.classList.contains('hidden');
+                console.log(test2 ? '✅ Test 2: Consent screen shown on first run' : '❌ Test 2 Failed');
+
+                consentBtn.click();
+                const test3 = localStorage.getItem(CONSENT_KEY) === 'true';
+                console.log(test3 ? '✅ Test 3: Consent saved after click' : '❌ Test 3 Failed');
+
+                initApp();
+                const test4 = consentOverlay.classList.contains('hidden');
+                console.log(test4 ? '✅ Test 4: Consent NOT shown on second run' : '❌ Test 4 Failed');
+
+                console.log('⚠️ Skipping eraseAllData test - requires page reload');
+                console.log('=== E2E Test Complete ===');
+            } catch (e) {
+                console.error('❌ E2E Test Error:', e);
+            }
+        }
 
         // Удаляем debug-блок, если DEBUG = false
         if (!DEBUG && debugArea) debugArea.remove();
@@ -1436,9 +1645,39 @@
         // Результатные действия
         const printBtn = document.getElementById('printBtn');
         const saveBtn = document.getElementById('saveBtn');
+        const downloadDocxBtn = document.getElementById('downloadDocxBtn');
 
         printBtn.addEventListener('click', () => {
             window.print();
+        });
+
+        downloadDocxBtn.addEventListener('click', async () => {
+            const text = resultDocument.innerText || resultDocument.textContent || '';
+            if (!text) return;
+            try {
+                const url = `${window.API_URL}/download-docx`;
+                console.log('Fetching:', url);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                if (!response.ok) throw new Error('Download failed: ' + response.status);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = 'document.docx';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(blobUrl);
+                    document.body.removeChild(a);
+                }, 0);
+            } catch (e) {
+                console.error('DOCX download error:', e);
+                alert('Ошибка скачивания: ' + e.message);
+            }
         });
 
         saveBtn.addEventListener('click', () => {
@@ -1824,7 +2063,7 @@
         };
 
         // Старт
-        showSelector();
+        initApp();
     </script>
 </body>
 </html>

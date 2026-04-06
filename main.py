@@ -1,13 +1,35 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
+from io import BytesIO
+from pathlib import Path
 import uuid
+from docx import Document
+from docx.shared import Pt, Cm, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from scenarios.receipt_simple import ReceiptSimpleScenario
 from scenarios.receipt_advanced import ReceiptAdvancedScenario
 from scenarios.loan import LoanScenario
 
 app = FastAPI()
+
+BASE_DIR = Path(__file__).resolve().parent
+
+# Подключаем static файлы если папка существует
+static_dir = BASE_DIR / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Маршрут для главной страницы
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    index_path = BASE_DIR / "index.html"
+    if index_path.exists():
+        return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<html><body><h1>ProjectText</h1><p>index.html not found</p></body></html>")
 
 # Настройка CORS - разрешаем все источники
 app.add_middleware(
@@ -43,6 +65,148 @@ class AgentResponse(BaseModel):
 class ScenarioRequest(BaseModel):
     session_id: str
     answer: str = ""
+
+class DocxRequest(BaseModel):
+    text: str
+
+def format_signatures(document_text: str) -> str:
+    """Приводит подписи к единому читаемому формату."""
+    import re
+    
+    doc_text = document_text
+    
+    doc_text = re.sub(r'_{3,}\s*/\s*([А-ЯЁа-яёё\s\-\.]+)', r'______________ / \1', doc_text)
+    
+    has_lender = bool(re.search(r'Подпись.*займодавца', doc_text, re.IGNORECASE))
+    has_borrower = bool(re.search(r'Подпись.*заемщика', doc_text, re.IGNORECASE))
+    has_single_sig = bool(re.search(r'Подпись.*:?[\s_]*$', doc_text, re.IGNORECASE | re.MULTILINE))
+    
+    if has_lender and has_borrower:
+        if '____________ / {lender}' in doc_text or '_____________ / {lender}' in doc_text:
+            doc_text = re.sub(r'____________+ / \{lender\}', '______________ / ФИО займодавца', doc_text)
+        if '____________ / {borrower}' in doc_text or '_____________ / {borrower}' in doc_text:
+            doc_text = re.sub(r'____________+ / \{borrower\}', '______________ / ФИО заемщика', doc_text)
+    elif has_single_sig:
+        if '____________ / {fio_receiver}' in doc_text or '_____________ / {fio_receiver}' in doc_text:
+            doc_text = re.sub(r'____________+ / \{fio_receiver\}', '______________ / ФИО', doc_text)
+    
+    if '______________ / ФИО' in doc_text or '____________ / ФИО' in doc_text:
+        pass
+    
+    return doc_text
+
+def generate_docx(document_text: str) -> bytes:
+    """Генерирует красивый DOCX документ из текста."""
+    import re
+    document_text = format_signatures(document_text)
+    doc = Document()
+    
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(12)
+    
+    for paragraph in doc.paragraphs:
+        paragraph.paragraph_format.line_spacing = 1.5
+    
+    doc.add_paragraph()
+    
+    table_pattern = re.compile(r'<div class="schedule-table"><table>.*?</table></div>', re.DOTALL)
+    tables_html = {}
+    for i, match in enumerate(table_pattern.findall(document_text)):
+        tables_html[f'__TABLE_{i}__'] = match
+        document_text = document_text.replace(match, f'__TABLE_{i}__')
+    
+    lines = document_text.split('\n')
+    prev_was_empty = True
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if not prev_was_empty:
+                prev_was_empty = True
+            continue
+        
+        prev_was_empty = False
+        
+        if line.startswith('__TABLE_') and line.endswith('__'):
+            table_html = tables_html.get(line)
+            if table_html:
+                tr_pattern = re.compile(r'<tr>.*?</tr>', re.DOTALL)
+                th_pattern = re.compile(r'<th>(.*?)</th>', re.DOTALL)
+                td_pattern = re.compile(r'<td[^>]*>(.*?)</td>', re.DOTALL)
+                
+                rows = tr_pattern.findall(table_html)
+                if rows:
+                    table = doc.add_table(rows=len(rows), cols=6)
+                    table.style = 'Table Grid'
+                    
+                    for row_idx, row_html in enumerate(rows):
+                        cells = td_pattern.findall(row_html)
+                        if row_idx == 0 and th_pattern.findall(row_html):
+                            headers = th_pattern.findall(row_html)
+                            for col_idx, header_text in enumerate(headers):
+                                if col_idx < 6:
+                                    cell = table.rows[row_idx].cells[col_idx]
+                                    cell.text = header_text
+                                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                                    for run in cell.paragraphs[0].runs:
+                                        run.font.bold = True
+                                        run.font.name = 'Times New Roman'
+                        else:
+                            cell_texts = td_pattern.findall(row_html)
+                            for col_idx, cell_text in enumerate(cell_texts):
+                                if col_idx < 6:
+                                    cell = table.rows[row_idx].cells[col_idx]
+                                    cell.text = cell_text
+                                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                                    for run in cell.paragraphs[0].runs:
+                                        run.font.name = 'Times New Roman'
+                continue
+        
+        is_header = (
+            line.isupper() or
+            'РАСПИСКА' in line or
+            'ДОГОВОР' in line or
+            'ИСКОВОЕ ЗАЯВЛЕНИЕ' in line or
+            'ГРАФИК ПЛАТЕЖЕЙ' in line or
+            'ПРАВОВАЯ ИНФОРМАЦИЯ' in line
+        )
+        
+        if is_header:
+            p = doc.add_paragraph(line)
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.space_after = Pt(6)
+            for run in p.runs:
+                run.font.bold = True
+                run.font.size = Pt(14)
+                run.font.name = 'Times New Roman'
+        else:
+            p = doc.add_paragraph(line)
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            p.paragraph_format.first_line_indent = Cm(1.25)
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.line_spacing = 1.5
+            for run in p.runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(12)
+    
+    doc.add_paragraph()
+    
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+@app.post("/download-docx")
+def download_docx(request: DocxRequest):
+    """Скачивание документа в формате DOCX."""
+    docx_bytes = generate_docx(request.text)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": "attachment; filename=document.docx"}
+    )
 
 def _make_key(session_id: str, scenario_type: str) -> str:
     """Создаёт составной ключ для хранения сценария."""
