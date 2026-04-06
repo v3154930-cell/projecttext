@@ -68,6 +68,47 @@ class ScenarioRequest(BaseModel):
 
 class DocxRequest(BaseModel):
     text: str
+    scenario_type: Optional[str] = None
+    collected_data: Optional[dict] = None
+
+def generate_docx_filename(scenario_type: str = None, collected_data: dict = None) -> str:
+    """Генерирует осмысленное имя файла на основе типа документа и даты."""
+    from datetime import datetime
+    
+    date_str = None
+    if collected_data:
+        date_value = collected_data.get('date')
+        if date_value:
+            try:
+                if isinstance(date_value, str):
+                    if '.' in date_value:
+                        parts = date_value.split('.')
+                        if len(parts) == 3:
+                            date_str = f"{parts[0]}.{parts[1]}.{parts[2]}"
+                        else:
+                            date_obj = datetime.strptime(date_value, '%Y-%m-%d')
+                            date_str = date_obj.strftime('%d.%m.%Y')
+                    else:
+                        date_obj = datetime.strptime(str(date_value)[:10], '%Y-%m-%d')
+                        date_str = date_obj.strftime('%d.%m.%Y')
+                else:
+                    date_obj = datetime.strptime(str(date_value)[:10], '%Y-%m-%d')
+                    date_str = date_obj.strftime('%d.%m.%Y')
+            except:
+                date_str = datetime.now().strftime('%d.%m.%Y')
+        else:
+            date_str = datetime.now().strftime('%d.%m.%Y')
+    else:
+        date_str = datetime.now().strftime('%d.%m.%Y')
+    
+    name_map = {
+        'loan': 'Договор_займа',
+        'receipt_simple': 'Расписка_простая',
+        'receipt_advanced': 'Расписка_расширенная'
+    }
+    prefix = name_map.get(scenario_type, 'Документ') if scenario_type else 'Документ'
+    
+    return f"{prefix}_{date_str}.docx"
 
 def format_signatures(document_text: str) -> str:
     """Приводит подписи к единому читаемому формату."""
@@ -202,10 +243,11 @@ def generate_docx(document_text: str) -> bytes:
 def download_docx(request: DocxRequest):
     """Скачивание документа в формате DOCX."""
     docx_bytes = generate_docx(request.text)
+    filename = generate_docx_filename(request.scenario_type, request.collected_data)
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": "attachment; filename=document.docx"}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 def _make_key(session_id: str, scenario_type: str) -> str:

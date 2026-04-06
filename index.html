@@ -1660,14 +1660,21 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
+                    body: JSON.stringify({ 
+                        text: text,
+                        scenario_type: currentScenarioType,
+                        collected_data: currentData
+                    })
                 });
                 if (!response.ok) throw new Error('Download failed: ' + response.status);
                 const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition') || '';
+                const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                const filename = filenameMatch ? filenameMatch[1] : 'document.docx';
                 const blobUrl = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = blobUrl;
-                a.download = 'document.docx';
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click();
                 setTimeout(() => {
