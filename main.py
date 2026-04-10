@@ -13,6 +13,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from scenarios.receipt_simple import ReceiptSimpleScenario
 from scenarios.receipt_advanced import ReceiptAdvancedScenario
 from scenarios.loan import LoanScenario
+from scenarios.claim_marketplace_buyer import ClaimMarketplaceBuyerScenario
 
 app = FastAPI()
 
@@ -47,7 +48,8 @@ sessions = {}
 template_map = {
     "receipt_simple": "templates/receipt_simple.txt",
     "receipt_advanced": "templates/receipt_advanced.txt",
-    "loan": "templates/loan.txt"
+    "loan": "templates/loan.txt",
+    "claim_marketplace_buyer": "templates/claim_marketplace_buyer.txt"
 }
 
 class AgentResponse(BaseModel):
@@ -104,7 +106,8 @@ def generate_docx_filename(scenario_type: str = None, collected_data: dict = Non
     name_map = {
         'loan': 'Договор_займа',
         'receipt_simple': 'Расписка_простая',
-        'receipt_advanced': 'Расписка_расширенная'
+        'receipt_advanced': 'Расписка_расширенная',
+        'claim_marketplace_buyer': 'Претензия_маркетплейс'
     }
     prefix = name_map.get(scenario_type, 'Документ') if scenario_type else 'Документ'
     
@@ -267,6 +270,8 @@ def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt
             sessions[key] = ReceiptAdvancedScenario()
         elif scenario_type == "loan":
             sessions[key] = LoanScenario()
+        elif scenario_type == "claim_marketplace_buyer":
+            sessions[key] = ClaimMarketplaceBuyerScenario()
         elif scenario_type == "claim_simple":
             # Заглушка для claim_simple - возвращаем None
             sessions[key] = None
