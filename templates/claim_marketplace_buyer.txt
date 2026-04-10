@@ -1,7 +1,10 @@
 ПРЕТЕНЗИЯ
 (по ст. 26.1 Закона о защите прав потребителей)
 
-Кому: {platform}
+Кому: {seller_full_name}
+Адрес: {seller_legal_address}
+ИНН: {seller_inn} {seller_kpp}
+
 От: {full_name}
 Паспорт: {passport}
 

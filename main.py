@@ -74,6 +74,16 @@ class DocxRequest(BaseModel):
     collected_data: Optional[dict] = None
 
 def generate_docx_filename(scenario_type: str = None, collected_data: dict = None) -> str:
+
+async def get_requisites_by_inn(inn: str) -> dict:
+    """Заглушка для получения реквизитов по ИНН через api-fns.ru"""
+    # TODO: реализовать реальный запрос к https://api-fns.ru/api/egr
+    return {
+        "full_name": f"Организация с ИНН {inn}",
+        "legal_address": "Адрес временно не определён",
+        "inn": inn,
+        "kpp": ""
+    }
     """Генерирует осмысленное имя файла на основе типа документа и даты."""
     from datetime import datetime
     
