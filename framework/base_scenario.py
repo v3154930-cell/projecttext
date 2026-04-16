@@ -80,9 +80,12 @@ class BaseScenario:
         return answer.strip().lower() in ["пропустить", "skip", ""]
 
     def _should_show_step(self, step: FieldStep) -> bool:
-        if step.depends_on is None:
-            return True
-        return step.depends_on in self.data
+        if step.depends_on is not None:
+            if step.depends_on not in self.data:
+                return False
+        if step.should_show is not None:
+            return step.should_show(self.data)
+        return True
 
     def _advance_to_next_step(self) -> Optional[str]:
         self._current_index += 1

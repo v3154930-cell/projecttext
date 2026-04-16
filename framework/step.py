@@ -13,4 +13,5 @@ class FieldStep:
     post_process: Optional[Callable[[str], str]] = None
     optional: bool = False
     depends_on: Optional[str] = None
+    should_show: Optional[Callable[[dict], bool]] = None
     cross_validators: list[Callable[[str, dict], Optional[str]]] = field(default_factory=list)

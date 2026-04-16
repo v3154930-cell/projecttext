@@ -24,6 +24,21 @@ def normalize_recipient_type(value: str) -> str:
     types = {"1": "marketplace", "2": "inn", "3": "manual"}
     return types.get(value.strip(), value)
 
+def validate_is_marketplace(value: str) -> bool:
+    return value == "marketplace"
+
+def should_show_for_marketplace(data: dict) -> bool:
+    return data.get("recipient_type") == "marketplace"
+
+def should_show_for_inn(data: dict) -> bool:
+    return data.get("recipient_type") == "inn"
+
+def should_show_for_manual(data: dict) -> bool:
+    return data.get("recipient_type") == "manual"
+
+def should_show_for_delivery_or_cancelled(data: dict) -> bool:
+    return data.get("claim_reason") in ("delivery", "cancelled")
+
 def validate_platform(value: str) -> Optional[str]:
     if not value:
         return "Выберите маркетплейс"
@@ -100,7 +115,7 @@ STEPS = [
         question="Выберите маркетплейс:\n\n1. Ozon\n2. Wildberries\n3. Яндекс Маркет\n\nВведите номер:",
         data_key="platform",
         field_type=FieldType.TEXT,
-        depends_on="recipient_type",
+        should_show=should_show_for_marketplace,
         validators=[validate_platform],
         post_process=normalize_platform,
     ),
@@ -109,7 +124,7 @@ STEPS = [
         question="Введите ИНН организации (10 или 12 цифр):",
         data_key="seller_inn",
         field_type=FieldType.TEXT,
-        depends_on="recipient_type",
+        should_show=should_show_for_inn,
         validators=[validate_seller_inn],
     ),
     FieldStep(
@@ -117,7 +132,7 @@ STEPS = [
         question="Введите полное наименование организации:",
         data_key="seller_full_name",
         field_type=FieldType.TEXT,
-        depends_on="recipient_type",
+        should_show=should_show_for_inn,
         validators=[lambda a: required(a, "Наименование организации")],
     ),
     FieldStep(
@@ -125,7 +140,7 @@ STEPS = [
         question="ИНН организации (опционально, 10 или 12 цифр):",
         data_key="seller_inn",
         field_type=FieldType.TEXT,
-        depends_on="recipient_type",
+        should_show=should_show_for_manual,
         optional=True,
     ),
     FieldStep(
@@ -133,7 +148,7 @@ STEPS = [
         question="Юридический адрес:",
         data_key="seller_legal_address",
         field_type=FieldType.TEXT,
-        depends_on="recipient_type",
+        should_show=should_show_for_manual,
         validators=[lambda a: required(a, "Юридический адрес")],
     ),
     FieldStep(name="ask_order_number", question="Введите номер заказа:", data_key="order_number", field_type=FieldType.TEXT, validators=[lambda a: required(a, "Номер заказа")]),
@@ -157,7 +172,7 @@ STEPS = [
         question="Введите дату оплаты заказа (ДД.ММ.ГГГГ):",
         data_key="prepayment_date",
         field_type=FieldType.DATE,
-        depends_on="claim_reason",
+        should_show=should_show_for_delivery_or_cancelled,
         validators=[validate_date],
         post_process=normalize_date,
     ),
@@ -166,7 +181,7 @@ STEPS = [
         question="Введите сумму предоплаты в рублях:",
         data_key="prepayment_amount",
         field_type=FieldType.MONEY,
-        depends_on="claim_reason",
+        should_show=should_show_for_delivery_or_cancelled,
         validators=[validate_money],
         post_process=format_money,
     ),
@@ -175,7 +190,7 @@ STEPS = [
         question="Введите дату возврата денег (ДД.ММ.ГГГГ), или нажмите 'Пропустить' если деньги ещё не возвращены:",
         data_key="refund_date",
         field_type=FieldType.DATE,
-        depends_on="claim_reason",
+        should_show=should_show_for_delivery_or_cancelled,
         optional=True,
         validators=[validate_date],
         post_process=normalize_date,
@@ -291,9 +306,10 @@ class ClaimMarketplaceBuyerScenario(BaseScenario):
         return super().generate_document(path)
 
     def _advance_to_next_step(self):
+        prev_index = self._current_index
         result = super()._advance_to_next_step()
-        if result is not None:
-            step_name = self._steps[self._current_index].name if self._current_index < len(self._steps) else ""
+        if prev_index < len(self._steps):
+            step_name = self._steps[prev_index].name
             if step_name == "ask_platform" and self.data.get("platform"):
                 self.data = post_process_platform(self.data)
         return result
