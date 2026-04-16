@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from framework import BaseScenario, FieldStep, FieldType, required, validate_date, validate_money, format_money, normalize_date
 from framework.common_components import create_fio_step, create_passport_steps
 
@@ -151,6 +152,34 @@ STEPS = [
         validators=[validate_claim_reason],
         post_process=normalize_claim_reason,
     ),
+    FieldStep(
+        name="ask_prepayment_date",
+        question="Введите дату оплаты заказа (ДД.ММ.ГГГГ):",
+        data_key="prepayment_date",
+        field_type=FieldType.DATE,
+        depends_on="claim_reason",
+        validators=[validate_date],
+        post_process=normalize_date,
+    ),
+    FieldStep(
+        name="ask_prepayment_amount",
+        question="Введите сумму предоплаты в рублях:",
+        data_key="prepayment_amount",
+        field_type=FieldType.MONEY,
+        depends_on="claim_reason",
+        validators=[validate_money],
+        post_process=format_money,
+    ),
+    FieldStep(
+        name="ask_refund_date",
+        question="Введите дату возврата денег (ДД.ММ.ГГГГ), или нажмите 'Пропустить' если деньги ещё не возвращены:",
+        data_key="refund_date",
+        field_type=FieldType.DATE,
+        depends_on="claim_reason",
+        optional=True,
+        validators=[validate_date],
+        post_process=normalize_date,
+    ),
 ]
 
 
@@ -179,6 +208,75 @@ class ClaimMarketplaceBuyerScenario(BaseScenario):
             return f"{condition}, "
         return ""
 
+    def calculate_penalty(self, prepayment_amount: float, prepayment_date: str, refund_date: Optional[str] = None) -> float:
+        if not prepayment_amount or not prepayment_date:
+            return 0.0
+        
+        parsed_prepayment_date = self._parse_date(prepayment_date)
+        if not parsed_prepayment_date:
+            return 0.0
+        
+        if refund_date:
+            parsed_refund_date = self._parse_date(refund_date)
+        else:
+            parsed_refund_date = datetime.now()
+        
+        if not parsed_refund_date:
+            return 0.0
+        
+        days = (parsed_refund_date - parsed_prepayment_date).days
+        if days < 0:
+            days = 0
+        
+        penalty = prepayment_amount * 0.005 * days
+        return round(penalty, 2)
+
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        if not date_str:
+            return None
+        try:
+            if '.' in date_str:
+                parts = date_str.split('.')
+                if len(parts) == 3:
+                    return datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+            return datetime.strptime(date_str[:10], '%Y-%m-%d')
+        except Exception:
+            return None
+
+    def _get_penalty_block(self) -> str:
+        claim_reason = self.data.get("claim_reason", "")
+        if claim_reason not in ("delivery", "cancelled"):
+            return ""
+        
+        prepayment_amount = self.data.get("prepayment_amount", "")
+        prepayment_date = self.data.get("prepayment_date", "")
+        
+        if not prepayment_amount or not prepayment_date:
+            return ""
+        
+        try:
+            amount_float = float(str(prepayment_amount).replace(' ', '').replace('₽', '').replace(',', '.'))
+        except (ValueError, TypeError):
+            amount_float = 0.0
+        
+        refund_date = self.data.get("refund_date", "")
+        penalty = self.calculate_penalty(amount_float, prepayment_date, refund_date if refund_date else None)
+        
+        if penalty <= 0:
+            return ""
+        
+        days = (datetime.now() - self._parse_date(prepayment_date)).days if not refund_date else (self._parse_date(refund_date) - self._parse_date(prepayment_date)).days
+        
+        return f"""
+РАСЧЁТ НЕУСТОЙКИ:
+- Сумма предоплаты: {prepayment_amount} руб.
+- Дата оплаты: {prepayment_date}
+- Период просрочки: {days} дней
+- Размер неустойки (0,5% в день): {penalty} руб.
+
+Неустойка рассчитана в соответствии со ст. 28 Закона РФ "О защите прав потребителей".
+"""
+
     def generate_document(self, template_path: Optional[str] = None) -> str:
         claim_reason = self.data.get("claim_reason", "")
         if claim_reason in self.TEMPLATE_MAP:
@@ -188,6 +286,7 @@ class ClaimMarketplaceBuyerScenario(BaseScenario):
         
         self.data["receipt_date_text"] = self._get_receipt_date_text()
         self.data["condition_text"] = self._get_condition_text()
+        self.data["penalty_block"] = self._get_penalty_block()
         
         return super().generate_document(path)
 
