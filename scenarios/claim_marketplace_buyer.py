@@ -6,9 +6,21 @@ from framework.common_components import create_fio_step, create_passport_steps
 PASSPORT_STEPS, PASSPORT_ASSEMBLER = create_passport_steps("ask_passport", "passport")
 
 MARKETPLACE_REQUISITES = {
-    "Ozon": {"full_name": "ООО \"Озон\"", "inn": "6345002063", "legal_address": "445351, Самарская обл., г. Жигулевск, ул. Песочная, зд. 11", "kpp": ""},
-    "Wildberries": {"full_name": "ООО \"РВБ\"", "inn": "9714053621", "legal_address": "142181, Московская область, г.о. Подольск, д Коледино, тер. Индустриальный Парк Коледино, д. 6 стр. 1", "kpp": ""},
-    "Yandex.Market": {"full_name": "ООО \"Яндекс Маркет\"", "inn": "9704254424", "legal_address": "119021, Г.Москва, Ул Тимура Фрунзе, Д. 11, К. 2", "kpp": ""}
+    "Ozon": {
+        "full_name": "ООО \"Озон\"",
+        "inn": "6345002063",
+        "legal_address": "123112, г. Москва, Пресненская наб., д. 10, помещение 1, эт. 41, комн. 6"
+    },
+    "Wildberries": {
+        "full_name": "ООО \"Вайлдберриз\"",
+        "inn": "7714752299",
+        "legal_address": "142181, Московская область, г. Подольск, деревня Коледино, Территория Индустриальный парк Коледино, дом 6, стр.1"
+    },
+    "Yandex.Market": {
+        "full_name": "ООО \"Яндекс Маркет\"",
+        "inn": "9704254424",
+        "legal_address": "121099, г. Москва, Новинский б-р, д. 8, пом. 9.03, этаж 9"
+    }
 }
 
 def validate_recipient_type(value: str) -> Optional[str]:
@@ -59,7 +71,7 @@ def post_process_platform(data: dict) -> dict:
         data["seller_full_name"] = req["full_name"]
         data["seller_inn"] = req["inn"]
         data["seller_legal_address"] = req["legal_address"]
-        data["seller_kpp"] = req.get("kpp", "")
+        data["seller_kpp"] = ""
     return data
 
 def validate_seller_inn(value: str) -> Optional[str]:

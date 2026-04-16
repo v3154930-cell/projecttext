@@ -117,14 +117,21 @@ class BaseScenario:
         LABELS = {
             "fio": "ФИО", "fio_receiver": "ФИО получателя", "fio_sender": "ФИО передающего",
             "fio_lender": "ФИО займодавца", "lender": "Займодавец", "borrower": "Заемщик",
-            "fio_borrower": "ФИО заемщика", "passport_series": "Паспорт (серия)",
-            "passport_number": "Паспорт (номер)", "passport_issued_by": "Паспорт (кем выдан)",
-            "passport_date": "Паспорт (дата выдачи)", "passport_code": "Паспорт (код подразделения)",
+            "fio_borrower": "ФИО заемщика", "passport_series": "Серия паспорта",
+            "passport_number": "Номер паспорта", "passport_issued_by": "Кем выдан",
+            "passport_date": "Дата выдачи", "passport_code": "Код подразделения",
             "amount": "Сумма", "date": "Дата", "return_date": "Срок возврата", "city": "Город",
             "term": "Срок возврата", "interest_rate": "Процентная ставка",
             "payment_option": "Вариант погашения", "penalty": "Штраф/пени",
             "repayment_order": "Порядок возврата", "repayment_method": "Порядок возврата",
             "purpose": "Цель займа", "collateral": "Обеспечение",
+            "platform": "Маркетплейс", "order_number": "Номер заказа", "product_name": "Товар",
+            "full_name": "ФИО получателя", "claim_reason": "Причина претензии",
+            "prepayment_date": "Дата оплаты", "prepayment_amount": "Сумма предоплаты",
+            "refund_date": "Дата возврата", "seller_full_name": "Продавец",
+            "seller_legal_address": "Адрес продавца", "seller_inn": "ИНН продавца",
+            "receipt_date": "Дата получения", "condition": "Состояние товара",
+            "recipient_type": "Тип получателя",
         }
         result = []
         for i, step in enumerate(self._steps):

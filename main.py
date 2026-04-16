@@ -74,16 +74,6 @@ class DocxRequest(BaseModel):
     collected_data: Optional[dict] = None
 
 def generate_docx_filename(scenario_type: str = None, collected_data: dict = None) -> str:
-
-async def get_requisites_by_inn(inn: str) -> dict:
-    """Заглушка для получения реквизитов по ИНН через api-fns.ru"""
-    # TODO: реализовать реальный запрос к https://api-fns.ru/api/egr
-    return {
-        "full_name": f"Организация с ИНН {inn}",
-        "legal_address": "Адрес временно не определён",
-        "inn": inn,
-        "kpp": ""
-    }
     """Генерирует осмысленное имя файла на основе типа документа и даты."""
     from datetime import datetime
     
@@ -323,8 +313,8 @@ def handle_scenario(request: ScenarioRequest, scenario_type: str):
     
     template_path = template_map.get(scenario_type, "templates/receipt_simple.txt")
     
-    # Если есть ответ - обрабатываем его
-    if request.answer and request.answer != "":
+    # Если есть ответ - обрабатываем его (включая пустую строку для пропуска optional полей)
+    if request.answer is not None:
         scenario.process_answer(request.answer)
         
         # Сразу проверяем завершение
