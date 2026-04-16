@@ -71,6 +71,19 @@ def normalize_condition(value: str) -> str:
     conditions = {"1": "упаковка не вскрыта", "2": "товар примеряли"}
     return conditions.get(value.strip(), value)
 
+def validate_claim_reason(value: str) -> Optional[str]:
+    if not value:
+        return "Выберите причину претензии"
+    value = value.strip()
+    valid = ["1", "2", "3", "4"]
+    if value not in valid:
+        return "Введите 1, 2, 3 или 4"
+    return None
+
+def normalize_claim_reason(value: str) -> str:
+    reasons = {"1": "not_suitable", "2": "defect", "3": "delivery", "4": "cancelled"}
+    return reasons.get(value.strip(), value)
+
 STEPS = [
     FieldStep(name="start", question=""),
     FieldStep(
@@ -130,14 +143,53 @@ STEPS = [
     FieldStep(name="ask_date", question="Введите дату подачи претензии (ДД.ММ.ГГГГ):", data_key="date", field_type=FieldType.DATE, validators=[validate_date], post_process=normalize_date),
     FieldStep(name="ask_receipt_date", question="Введите дату получения товара (ДД.ММ.ГГГГ), или нажмите 'Пропустить':", data_key="receipt_date", field_type=FieldType.DATE, optional=True, validators=[validate_date], post_process=normalize_date),
     FieldStep(name="ask_condition", question="Выберите состояние товара:\n\n1. Упаковка не вскрыта\n2. Товар примеряли\n\nВведите номер (или пропустите):", data_key="condition", field_type=FieldType.TEXT, optional=True, validators=[validate_condition], post_process=normalize_condition),
+    FieldStep(
+        name="ask_claim_reason",
+        question="Выберите причину претензии:\n\n1. Товар не подошёл (цвет, размер, фасон)\n2. Товар сломался / брак / не работает\n3. Нарушен срок доставки\n4. Заказ отменён маркетплейсом\n\nВведите номер:",
+        data_key="claim_reason",
+        field_type=FieldType.TEXT,
+        validators=[validate_claim_reason],
+        post_process=normalize_claim_reason,
+    ),
 ]
 
 
 class ClaimMarketplaceBuyerScenario(BaseScenario):
+    TEMPLATE_MAP = {
+        "not_suitable": "templates/claim_not_suitable.txt",
+        "defect": "templates/claim_defect.txt",
+        "delivery": "templates/claim_delivery.txt",
+        "cancelled": "templates/claim_cancelled.txt",
+    }
+
     def __init__(self):
         super().__init__(steps=STEPS, template_path="templates/claim_marketplace_buyer.txt")
         self._preview_enabled = True
         self._field_assemblers["passport"] = PASSPORT_ASSEMBLER
+
+    def _get_receipt_date_text(self):
+        receipt_date = self.data.get("receipt_date", "")
+        if receipt_date:
+            return f"Дата получения товара: {receipt_date}.\n"
+        return ""
+
+    def _get_condition_text(self):
+        condition = self.data.get("condition", "")
+        if condition:
+            return f"{condition}, "
+        return ""
+
+    def generate_document(self, template_path: Optional[str] = None) -> str:
+        claim_reason = self.data.get("claim_reason", "")
+        if claim_reason in self.TEMPLATE_MAP:
+            path = self.TEMPLATE_MAP[claim_reason]
+        else:
+            path = template_path or self._template_path
+        
+        self.data["receipt_date_text"] = self._get_receipt_date_text()
+        self.data["condition_text"] = self._get_condition_text()
+        
+        return super().generate_document(path)
 
     def _advance_to_next_step(self):
         result = super()._advance_to_next_step()
