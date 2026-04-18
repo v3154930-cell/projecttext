@@ -3,520 +3,1016 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ДокОбразец — юридические документы онлайн</title>
+    <title>ДокОбразец — Юридические документы онлайн</title>
     <style>
-        * {
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        :root {
+            --teal-50: #f0fdfa;
+            --teal-100: #ccfbf1;
+            --teal-200: #99f6e4;
+            --teal-300: #5eead4;
+            --teal-400: #2dd4bf;
+            --teal-500: #14b8a6;
+            --teal-600: #0d9488;
+            --teal-700: #0f766e;
+            --teal-800: #115e59;
+            --teal-900: #134e4a;
+            --teal-950: #042f2e;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
         body {
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #0d6efd 0%, #20c997 100%);
-            min-height: 100vh;
-            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--teal-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
+        /* ===== HEADER / NAV ===== */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 40px;
-            flex-wrap: wrap;
-            gap: 15px;
-            backdrop-filter: blur(10px);
-            background: rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(13, 148, 136, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.3s ease;
         }
 
-        .logo {
-            font-size: 28px;
+        .header__inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header__logo {
+            font-size: 20px;
             font-weight: 700;
+            color: var(--white);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header__logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .header__nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .header__nav a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        .header__nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--white);
+            transition: width 0.3s ease;
+            border-radius: 1px;
+        }
+
+        .header__nav a:hover {
+            color: var(--white);
+        }
+
+        .header__nav a:hover::after {
+            width: 100%;
+        }
+
+        .header__btn {
+            padding: 8px 20px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 8px;
+            color: var(--white);
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .header__btn:hover {
+            background: var(--white);
+            color: var(--teal-700);
+            border-color: var(--white);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.2);
+        }
+
+        /* ===== HERO BLOCK ===== */
+        .hero {
+            position: relative;
+            min-height: 560px;
+            padding-top: 64px;
+            background: linear-gradient(135deg, var(--teal-700) 0%, var(--teal-600) 30%, var(--teal-500) 60%, var(--teal-400) 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Animated background shapes */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: heroPulse 8s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: heroPulse 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes heroPulse {
+            0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.5; }
+            50% { transform: scale(1.15) translate(20px, -15px); opacity: 1; }
+        }
+
+        /* Floating document decorations */
+        .hero__decorations {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .hero__deco-doc {
+            position: absolute;
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+        }
+
+        .hero__deco-doc--1 {
+            top: 15%;
+            right: 8%;
+            width: 60px;
+            height: 75px;
+            animation: floatDoc1 6s ease-in-out infinite;
+        }
+
+        .hero__deco-doc--2 {
+            top: 25%;
+            right: 18%;
+            width: 50px;
+            height: 62px;
+            animation: floatDoc2 7s ease-in-out infinite;
+        }
+
+        .hero__deco-doc--3 {
+            top: 40%;
+            right: 5%;
+            width: 55px;
+            height: 68px;
+            animation: floatDoc3 5s ease-in-out infinite;
+        }
+
+        .hero__deco-doc--4 {
+            bottom: 20%;
+            right: 15%;
+            width: 45px;
+            height: 55px;
+            animation: floatDoc1 8s ease-in-out infinite;
+        }
+
+        .hero__deco-doc--5 {
+            top: 30%;
+            left: 5%;
+            width: 40px;
+            height: 50px;
+            animation: floatDoc2 6.5s ease-in-out infinite;
+        }
+
+        /* Lines inside document icons */
+        .hero__deco-doc::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 8px;
+            right: 8px;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 1px;
+            box-shadow:
+                0 6px 0 rgba(255,255,255,0.2),
+                0 12px 0 rgba(255,255,255,0.15);
+        }
+
+        .hero__deco-doc--1::after,
+        .hero__deco-doc--3::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+        }
+
+        @keyframes floatDoc1 {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+
+        @keyframes floatDoc2 {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(-3deg); }
+        }
+
+        @keyframes floatDoc3 {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(5deg); }
+        }
+
+        /* Wave at bottom of hero */
+        .hero__wave {
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            z-index: 2;
+        }
+
+        .hero__wave svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .hero__inner {
+            position: relative;
+            z-index: 3;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px 120px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .hero__content {
+            max-width: 560px;
+        }
+
+        .hero__title {
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--white);
+            line-height: 1.15;
+            margin-bottom: 16px;
             letter-spacing: -0.5px;
         }
 
-        .nav a {
-            color: #fff;
-            text-decoration: none;
-            margin-left: 30px;
-            font-weight: 500;
-            transition: opacity 0.2s;
-        }
-
-        .nav a:hover {
-            opacity: 0.8;
-            text-decoration: underline;
-        }
-
-        .hero {
-            text-align: center;
-            padding: 80px 20px;
-        }
-
-        .hero h1 {
-            font-size: 48px;
-            font-weight: 800;
-            margin-bottom: 16px;
-        }
-
-        .hero p {
-            font-size: 20px;
-            opacity: 0.9;
+        .hero__subtitle {
+            font-size: 17px;
+            color: rgba(255,255,255,0.85);
             margin-bottom: 32px;
+            line-height: 1.6;
+            max-width: 460px;
         }
 
-        .hero .btn-primary {
-            background: white;
-            color: #0d6efd;
-            border: none;
-            padding: 12px 32px;
-            font-size: 18px;
+        .hero__buttons {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 600;
-            border-radius: 40px;
+            text-decoration: none;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            position: relative;
+            overflow: hidden;
         }
 
-        .hero .btn-primary:hover {
+        .btn--primary {
+            background: var(--white);
+            color: var(--teal-700);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        }
+
+        .btn--primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn--primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
 
-        .categories {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            padding: 20px 40px 60px;
-            flex-wrap: wrap;
+        .btn--primary:hover::before {
+            left: 100%;
         }
 
-        .category-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            border-radius: 20px;
-            padding: 24px 32px;
-            text-align: center;
-            color: #0d6efd;
-            font-weight: 600;
-            font-size: 18px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-            cursor: pointer;
-        }
-
-        .category-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .scenarios-container {
-            background: #F5F7FA;
-            border-radius: 32px 32px 0 0;
-            padding: 40px;
-            margin-top: 20px;
-            color: #2C3E50;
-        }
-
-        .buttons-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .card-btn {
-            background: #FFFFFF;
-            border: 1px solid #E8ECEF;
-            border-radius: 16px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .card-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            border-color: #20c997;
-        }
-
-        .card-icon {
-            width: 48px;
-            height: 48px;
-            background: #E9F7F2;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-
-        .card-content h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0d6efd;
-            margin-bottom: 4px;
-        }
-
-        .card-content p {
-            font-size: 14px;
-            color: #5A6E85;
-        }
-
-        .scenario-panel {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .scenario-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .scenario-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #0d6efd;
-        }
-
-        .btn-secondary {
+        .btn--outline {
             background: transparent;
-            border: 1px solid #0d6efd;
-            color: #0d6efd;
-            padding: 8px 16px;
-            border-radius: 30px;
-            cursor: pointer;
+            color: var(--white);
+            border: 2px solid rgba(255,255,255,0.5);
         }
 
-        .question-area {
-            background: #F8FAFE;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            border-left: 4px solid #20c997;
-            color: #2C3E50;
+        .btn--outline:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: var(--white);
+            transform: translateY(-2px);
         }
 
-        .answer-area {
+        .btn--teal {
+            background: var(--teal-600);
+            color: var(--white);
+        }
+
+        .btn--teal:hover {
+            background: var(--teal-700);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
+        }
+
+        /* Hero illustration */
+        .hero__illustration {
+            flex-shrink: 0;
+            width: 400px;
+            height: 320px;
+            position: relative;
+        }
+
+        .hero__illustration svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main {
+            position: relative;
+            z-index: 5;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+        }
+
+        /* ===== SECTION ===== */
+        .section {
+            margin-bottom: 56px;
+        }
+
+        .section__header {
+            margin-bottom: 28px;
+        }
+
+        .section__title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+        }
+
+        .section__subtitle {
+            font-size: 15px;
+            color: var(--gray-500);
+        }
+
+        /* ===== CARDS GRID ===== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .cards-grid--3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* ===== CARD ===== */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--teal-400), var(--teal-600));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card__icon {
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius-sm);
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .answer-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #E0E4E8;
-            border-radius: 30px;
-            font-size: 16px;
-        }
-
-        .btn-primary-small {
-            background: #0d6efd;
-            color: white;
-            border: none;
-            padding: 0 24px;
-            border-radius: 30px;
-            cursor: pointer;
-        }
-
-        .document-area {
-            background: #F8FAFE;
-            border-radius: 16px;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            font-size: 14px;
-            max-height: 500px;
-            overflow: auto;
-            margin-top: 20px;
-            color: #2C3E50;
-        }
-
-        .result-panel {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .result-document {
-            background: #F8FAFE;
-            border-radius: 16px;
-            padding: 20px;
-            white-space: pre-wrap;
-            font-size: 14px;
-            max-height: 500px;
-            overflow: auto;
-            margin-bottom: 20px;
-            color: #2C3E50;
-        }
-
-        .result-actions {
-            display: flex;
+            align-items: center;
             justify-content: center;
-            gap: 12px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
         }
 
-        .btn-result {
-            background: #0d6efd;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 30px;
-            cursor: pointer;
+        .card__icon--blue {
+            background: linear-gradient(135deg, var(--teal-100), var(--teal-200));
         }
 
-        .legal-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: #E9F7F2;
-            border-left: 4px solid #20c997;
+        .card__icon--orange {
+            background: linear-gradient(135deg, #fff7ed, #ffedd5);
+        }
+
+        .card__icon--shield {
+            background: linear-gradient(135deg, var(--teal-100), var(--teal-200));
+        }
+
+        .card__icon--building {
+            background: linear-gradient(135deg, var(--teal-100), var(--teal-200));
+        }
+
+        .card__icon svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        .card__title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+
+        .card__text {
             font-size: 14px;
-            color: #2C3E50;
+            color: var(--gray-500);
+            line-height: 1.5;
+            margin-bottom: 18px;
         }
 
-        @media (max-width: 700px) {
-            .header { flex-direction: column; }
-            .hero h1 { font-size: 32px; }
-            .buttons-grid { grid-template-columns: 1fr; }
+        .card__btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--teal-500), var(--teal-600));
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .card__btn:hover {
+            background: linear-gradient(135deg, var(--teal-600), var(--teal-700));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+        }
+
+        /* Card button variant */
+        .card__btn--teal {
+            background: linear-gradient(135deg, var(--teal-400), var(--teal-500));
+        }
+
+        .card__btn--teal:hover {
+            background: linear-gradient(135deg, var(--teal-500), var(--teal-600));
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--teal-900);
+            color: rgba(255,255,255,0.7);
+            padding: 40px 24px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--teal-300);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            color: var(--white);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .hero__inner {
+                flex-direction: column;
+                text-align: center;
+                padding: 40px 20px 100px;
+            }
+
+            .hero__content {
+                max-width: 100%;
+            }
+
+            .hero__title {
+                font-size: 32px;
+            }
+
+            .hero__subtitle {
+                max-width: 100%;
+            }
+
+            .hero__buttons {
+                justify-content: center;
+            }
+
+            .hero__illustration {
+                width: 300px;
+                height: 240px;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cards-grid--3 {
+                grid-template-columns: 1fr;
+            }
+
+            .header__nav {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .hero__title {
+                font-size: 26px;
+            }
+
+            .section__title {
+                font-size: 22px;
+            }
+
+            .hero__buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* ===== ANIMATIONS ON SCROLL (CSS only) ===== */
+        .card {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: cardAppear 0.6s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+        .card:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes cardAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sparkle particles in hero */
+        .hero__sparkles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .hero__sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            animation: sparkle 3s ease-in-out infinite;
+        }
+
+        .hero__sparkle:nth-child(1) { top: 20%; left: 15%; animation-delay: 0s; }
+        .hero__sparkle:nth-child(2) { top: 60%; left: 8%; animation-delay: 0.8s; }
+        .hero__sparkle:nth-child(3) { top: 35%; right: 25%; animation-delay: 1.5s; }
+        .hero__sparkle:nth-child(4) { top: 75%; right: 10%; animation-delay: 0.4s; }
+        .hero__sparkle:nth-child(5) { top: 15%; right: 40%; animation-delay: 2s; }
+        .hero__sparkle:nth-child(6) { top: 50%; left: 30%; animation-delay: 1.2s; }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* Gradient text effect for hero title */
+        .hero__title-highlight {
+            background: linear-gradient(90deg, var(--white), var(--teal-100));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Shimmer effect on cards */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(255,255,255,0.03) 50%,
+                transparent 60%
+            );
+            transition: transform 0.6s ease;
+            transform: translateX(-100%);
+        }
+
+        .card:hover::after {
+            transform: translateX(100%);
+        }
+
+        /* Ripple effect on buttons */
+        .btn--primary:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
         }
     </style>
 </head>
 <body>
 
-<header class="header">
-    <div class="logo">📄 ДокОбразец</div>
-    <div class="nav">
-        <a href="#" id="navHome">Главная</a>
-        <a href="#" id="navHowItWorks">Как это работает</a>
-        <a href="#" id="navTariffs">Тарифы</a>
-        <a href="#" id="navHelp">Помощь</a>
-    </div>
-</header>
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+        <div class="header__inner">
+            <a href="#" class="header__logo">
+                <svg viewBox="0 0 28 28" fill="none">
+                    <rect width="28" height="28" rx="6" fill="rgba(255,255,255,0.2)"/>
+                    <path d="M8 7h12v2H8zm0 4h8v2H8zm0 4h10v2H8zm0 4h6v2H8z" fill="white" opacity="0.9"/>
+                </svg>
+                ДокОбразец
+            </a>
+            <nav>
+                <ul class="header__nav">
+                    <li><a href="#">Главная</a></li>
+                    <li><a href="#">Как это работает</a></li>
+                    <li><a href="#">Тарифы</a></li>
+                    <li><a href="#">Помощь</a></li>
+                </ul>
+            </nav>
+            <a href="#" class="header__btn">Войти</a>
+        </div>
+    </header>
 
-<section class="hero">
-    <h1>Создайте юридические документы онлайн</h1>
-    <p>Быстро и удобно за несколько минут</p>
-    <button class="btn-primary" id="scrollToDocs">📄 Создать документ</button>
-</section>
+    <!-- ===== HERO ===== -->
+    <section class="hero">
+        <!-- Floating document decorations -->
+        <div class="hero__decorations">
+            <div class="hero__deco-doc hero__deco-doc--1"></div>
+            <div class="hero__deco-doc hero__deco-doc--2"></div>
+            <div class="hero__deco-doc hero__deco-doc--3"></div>
+            <div class="hero__deco-doc hero__deco-doc--4"></div>
+            <div class="hero__deco-doc hero__deco-doc--5"></div>
+        </div>
 
-<div class="categories" id="categoryScroll">
-    <div class="category-card" data-category="receipts">📑 Расписки и договоры</div>
-    <div class="category-card" data-category="claims">⚖️ Досудебные претензии</div>
-    <div class="category-card" data-category="complaints">📢 Жалобы в госорганы</div>
-</div>
+        <!-- Sparkle particles -->
+        <div class="hero__sparkles">
+            <div class="hero__sparkle"></div>
+            <div class="hero__sparkle"></div>
+            <div class="hero__sparkle"></div>
+            <div class="hero__sparkle"></div>
+            <div class="hero__sparkle"></div>
+            <div class="hero__sparkle"></div>
+        </div>
 
-<div class="scenarios-container" id="scenariosContainer">
-    <div id="selectorBlock">
-        <div class="buttons-grid" id="docsGrid"></div>
-    </div>
+        <div class="hero__inner">
+            <div class="hero__content">
+                <h1 class="hero__title">Создайте юридические документы онлайн</h1>
+                <p class="hero__subtitle">Быстро и легко составьте любые юридические документы за несколько минут.</p>
+                <div class="hero__buttons">
+                    <a href="#" class="btn btn--primary">Создать документ</a>
+                    <a href="#" class="btn btn--outline">Смотреть примеры</a>
+                </div>
+            </div>
 
-    <div id="scenarioPanel" class="scenario-panel">
-        <div class="scenario-header">
-            <div class="scenario-title" id="scenarioTitle"></div>
-            <div>
-                <button id="resetBtn" class="btn-secondary">Сбросить сессию</button>
-                <button id="backBtn" class="btn-secondary">Назад</button>
+            <!-- Hero illustration (SVG) -->
+            <div class="hero__illustration">
+                <svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Desk -->
+                    <ellipse cx="200" cy="290" rx="160" ry="12" fill="rgba(255,255,255,0.1)"/>
+                    <!-- Chair -->
+                    <rect x="160" y="195" width="80" height="80" rx="8" fill="#0f766e" opacity="0.3"/>
+                    <rect x="170" y="200" width="60" height="70" rx="6" fill="#0d9488" opacity="0.5"/>
+                    <!-- Person body -->
+                    <rect x="168" y="170" width="64" height="80" rx="12" fill="white" opacity="0.9"/>
+                    <!-- Head -->
+                    <circle cx="200" cy="140" r="28" fill="white" opacity="0.9"/>
+                    <!-- Hair -->
+                    <ellipse cx="200" cy="120" rx="30" ry="22" fill="#0f766e" opacity="0.8"/>
+                    <rect x="172" y="130" width="8" height="30" rx="4" fill="#0f766e" opacity="0.8"/>
+                    <rect x="220" y="130" width="8" height="30" rx="4" fill="#0f766e" opacity="0.8"/>
+                    <!-- Eyes -->
+                    <circle cx="192" cy="142" r="2.5" fill="#0f766e"/>
+                    <circle cx="208" cy="142" r="2.5" fill="#0f766e"/>
+                    <!-- Smile -->
+                    <path d="M194 152 Q200 157 206 152" stroke="#0f766e" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <!-- Laptop -->
+                    <rect x="210" y="220" width="80" height="50" rx="4" fill="white" opacity="0.9"/>
+                    <rect x="216" y="226" width="68" height="38" rx="2" fill="#0d9488" opacity="0.2"/>
+                    <rect x="200" y="270" width="100" height="6" rx="3" fill="white" opacity="0.8"/>
+                    <!-- Floating documents -->
+                    <g opacity="0.7">
+                        <rect x="60" y="160" width="45" height="58" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                        <line x1="70" y1="175" x2="95" y2="175" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="70" y1="185" x2="90" y2="185" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="70" y1="195" x2="85" y2="195" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="90" cy="205" r="5" fill="rgba(255,255,255,0.3)"/>
+                    </g>
+                    <g opacity="0.6">
+                        <rect x="300" y="140" width="40" height="52" rx="4" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+                        <line x1="308" y1="155" x2="332" y2="155" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="308" y1="165" x2="328" y2="165" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="308" y1="175" x2="320" y2="175" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+                    </g>
+                    <g opacity="0.5">
+                        <rect x="320" y="200" width="38" height="48" rx="4" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                        <line x1="328" y1="215" x2="350" y2="215" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="328" y1="225" x2="345" y2="225" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+                    </g>
+                    <!-- Arms -->
+                    <rect x="230" y="230" width="40" height="10" rx="5" fill="white" opacity="0.7"/>
+                    <rect x="170" y="230" width="30" height="10" rx="5" fill="white" opacity="0.7"/>
+                </svg>
             </div>
         </div>
-        <div id="questionArea" class="question-area">Вопрос будет здесь</div>
-        <div class="answer-area">
-            <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ...">
-            <button id="sendBtn" class="btn-primary-small">Отправить</button>
+
+        <!-- Wave separator -->
+        <div class="hero__wave">
+            <svg viewBox="0 0 1440 120" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 60L48 55C96 50 192 40 288 42C384 44 480 58 576 62C672 66 768 60 864 55C960 50 1056 46 1152 48C1248 50 1344 58 1392 62L1440 66V120H1392C1344 120 1248 120 1152 120C1056 120 960 120 864 120C768 120 672 120 576 120C480 120 384 120 288 120C192 120 96 120 48 120H0V60Z" fill="#f0fdfa"/>
+                <path d="M0 80L48 75C96 70 192 60 288 62C384 64 480 78 576 82C672 86 768 80 864 75C960 70 1056 66 1152 68C1248 70 1344 78 1392 82L1440 86V120H0V80Z" fill="#f0fdfa" opacity="0.5"/>
+            </svg>
         </div>
-        <div id="documentArea" class="document-area" style="display: none;"></div>
-        <div id="stepInfo" class="step-info"></div>
-    </div>
+    </section>
 
-    <div id="resultPanel" class="result-panel">
-        <div class="result-header" style="font-size:24px; font-weight:600;">Документ готов</div>
-        <div id="resultDocument" class="result-document"></div>
-        <div class="result-actions">
-            <button id="printBtn" class="btn-result">Печать / PDF</button>
-            <button id="saveBtn" class="btn-result">Сохранить</button>
-            <button id="newDocBtn" class="btn-result">Новый документ</button>
-        </div>
-    </div>
-</div>
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main">
 
-<script>
-    window.API_URL = 'http://127.0.0.1:8000';
-    const API_BASE = window.API_URL + '/api/scenario';
-
-    let currentSessionId = null;
-    let currentScenarioType = null;
-    let currentScenarioName = '';
-    let isComplete = false;
-    let isLoading = false;
-
-    const selectorBlock = document.getElementById('selectorBlock');
-    const scenarioPanel = document.getElementById('scenarioPanel');
-    const resultPanel = document.getElementById('resultPanel');
-    const docsGrid = document.getElementById('docsGrid');
-    const scenarioTitle = document.getElementById('scenarioTitle');
-    const questionArea = document.getElementById('questionArea');
-    const answerInput = document.getElementById('answerInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const backBtn = document.getElementById('backBtn');
-    const documentArea = document.getElementById('documentArea');
-    const resultDocument = document.getElementById('resultDocument');
-    const newDocBtn = document.getElementById('newDocBtn');
-    const printBtn = document.getElementById('printBtn');
-    const saveBtn = document.getElementById('saveBtn');
-
-    const docs = {
-        receipts: [
-            { type: "receipt_simple", name: "Простая расписка", desc: "Долговая расписка", icon: "₽" },
-            { type: "receipt_advanced", name: "Расширенная расписка", desc: "С процентами, штрафами", icon: "%" },
-            { type: "loan", name: "Договор займа", desc: "Стандартный договор", icon: "📄" }
-        ],
-        claims: [
-            { type: "claim_marketplace_buyer", name: "Досудебная претензия на маркетплейс", desc: "Ozon, WB, Яндекс", icon: "🛒" },
-            { type: "claim_universal", name: "Досудебная претензия (универсальная)", desc: "Любому получателю", icon: "⚖️" },
-            { type: "claim_bank_block", name: "Претензия в банк", desc: "ФЗ-115 блокировка", icon: "🏦" }
-        ],
-        complaints: [
-            { type: "complaint_rospotrebnadzor", name: "Жалоба в Роспотребнадзор", desc: "Защита прав потребителей", icon: "🛡️" },
-            { type: "complaint_prosecutor", name: "Жалоба в прокуратуру", desc: "Надзор за правами", icon: "⚡" }
-        ]
-    };
-
-    function renderDocs() {
-        docsGrid.innerHTML = '';
-        [...docs.receipts, ...docs.claims, ...docs.complaints].forEach(doc => {
-            const card = document.createElement('div');
-            card.className = 'card-btn';
-            card.setAttribute('data-type', doc.type);
-            card.innerHTML = `
-                <div class="card-icon">${doc.icon}</div>
-                <div class="card-content">
-                    <h3>${doc.name}</h3>
-                    <p>${doc.desc}</p>
+        <!-- Section 1: Расписки и Договоры -->
+        <section class="section">
+            <div class="section__header">
+                <h2 class="section__title">Расписки и Договоры</h2>
+                <p class="section__subtitle">Создание расписок и договоров различных типов.</p>
+            </div>
+            <div class="cards-grid">
+                <!-- Card 1 -->
+                <div class="card">
+                    <div class="card__icon card__icon--blue">
+                        <!-- Document icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <rect x="4" y="2" width="18" height="22" rx="2" fill="#0d9488" opacity="0.15"/>
+                            <rect x="4" y="2" width="18" height="22" rx="2" stroke="#0d9488" stroke-width="1.5"/>
+                            <line x1="8" y1="8" x2="18" y2="8" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="8" y1="12" x2="18" y2="12" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="8" y1="16" x2="14" y2="16" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="17" cy="19" r="2.5" fill="#0d9488" opacity="0.3"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Расписки и Договоры</h3>
+                    <p class="card__text">Создание расписок и договоров различных типов.</p>
+                    <a href="#" class="card__btn">Перейти в раздел</a>
                 </div>
-            `;
-            card.onclick = () => showScenario(doc.type, doc.name);
-            docsGrid.appendChild(card);
-        });
-    }
 
-    function showSelector() {
-        selectorBlock.style.display = 'block';
-        scenarioPanel.style.display = 'none';
-        resultPanel.style.display = 'none';
-        currentSessionId = null;
-        currentScenarioType = null;
-        isComplete = false;
-        answerInput.value = '';
-    }
+                <!-- Card 2 -->
+                <div class="card">
+                    <div class="card__icon card__icon--orange">
+                        <!-- Warning/claim icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <rect x="4" y="2" width="18" height="22" rx="2" fill="#ea580c" opacity="0.1"/>
+                            <rect x="4" y="2" width="18" height="22" rx="2" stroke="#ea580c" stroke-width="1.5"/>
+                            <polygon points="13,7 16,12 10,12" fill="#ea580c" opacity="0.6"/>
+                            <line x1="13" y1="14" x2="13" y2="18" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="8" y1="20" x2="18" y2="20" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Досудебные Претензии</h3>
+                    <p class="card__text">Претензии для досудебного урегулирования.</p>
+                    <a href="#" class="card__btn">Перейти в раздел</a>
+                </div>
+            </div>
+        </section>
 
-    async function showScenario(type, name) {
-        selectorBlock.style.display = 'none';
-        scenarioPanel.style.display = 'block';
-        resultPanel.style.display = 'none';
-        currentScenarioType = type;
-        currentScenarioName = name;
-        scenarioTitle.innerText = name;
-        currentSessionId = crypto.randomUUID();
-        isComplete = false;
-        questionArea.innerText = '⏳ Загрузка...';
-        try {
-            const resp = await fetch(`${API_BASE}/${type}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: currentSessionId, answer: '' })
-            });
-            const data = await resp.json();
-            if (data.is_complete) {
-                showResult(data.document);
-            } else {
-                questionArea.innerText = data.question;
-                answerInput.disabled = false;
-                sendBtn.disabled = false;
-            }
-        } catch (err) {
-            questionArea.innerText = 'Ошибка загрузки. Проверьте сервер.';
-        }
-    }
+        <!-- Section 2: Жалобы в Гос Органы -->
+        <section class="section">
+            <div class="section__header">
+                <h2 class="section__title">Жалобы в Гос Органы</h2>
+                <p class="section__subtitle">Жалобы и обращения в государственные инстанции.</p>
+            </div>
+            <div class="cards-grid">
+                <!-- Card 3 -->
+                <div class="card">
+                    <div class="card__icon card__icon--building">
+                        <!-- Building icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <path d="M13 3L4 9v13h18V9L13 3z" fill="#0d9488" opacity="0.12"/>
+                            <path d="M13 3L4 9v13h18V9L13 3z" stroke="#0d9488" stroke-width="1.5" stroke-linejoin="round"/>
+                            <rect x="9" y="14" width="3" height="4" rx="0.5" fill="#0d9488" opacity="0.5"/>
+                            <rect x="14" y="14" width="3" height="4" rx="0.5" fill="#0d9488" opacity="0.5"/>
+                            <rect x="11.5" y="18" width="3" height="4" rx="0.5" fill="#0d9488" opacity="0.4"/>
+                            <!-- Columns -->
+                            <line x1="8" y1="9" x2="8" y2="13" stroke="#0d9488" stroke-width="1.5"/>
+                            <line x1="18" y1="9" x2="18" y2="13" stroke="#0d9488" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Жалобы в Гос Органы</h3>
+                    <p class="card__text">Жалобы и обращения в государственные инстанции.</p>
+                    <a href="#" class="card__btn">Перейти в раздел</a>
+                </div>
 
-    async function sendAnswer() {
-        if (!currentSessionId || !currentScenarioType) return;
-        const answer = answerInput.value.trim();
-        if (!answer) return;
-        answerInput.disabled = true;
-        sendBtn.disabled = true;
-        questionArea.innerText = '⏳ Обработка...';
-        try {
-            const resp = await fetch(`${API_BASE}/${currentScenarioType}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: currentSessionId, answer })
-            });
-            const data = await resp.json();
-            if (data.is_complete) {
-                showResult(data.document);
-            } else {
-                questionArea.innerText = data.question;
-                answerInput.value = '';
-                answerInput.disabled = false;
-                sendBtn.disabled = false;
-            }
-        } catch (err) {
-            questionArea.innerText = 'Ошибка. Попробуйте ещё раз.';
-            answerInput.disabled = false;
-            sendBtn.disabled = false;
-        }
-    }
+                <!-- Card 4 -->
+                <div class="card">
+                    <div class="card__icon card__icon--shield">
+                        <!-- Shield icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <path d="M13 3L5 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6L13 3z" fill="#0d9488" opacity="0.12"/>
+                            <path d="M13 3L5 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6L13 3z" stroke="#0d9488" stroke-width="1.5" stroke-linejoin="round"/>
+                            <circle cx="13" cy="13" r="3" fill="#0d9488" opacity="0.3"/>
+                            <circle cx="13" cy="13" r="1" fill="#0d9488" opacity="0.6"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Жалобы в Гос Органы</h3>
+                    <p class="card__text">Жалобы и обращения в государственные инстанции.</p>
+                    <a href="#" class="card__btn">Перейти в раздел</a>
+                </div>
+            </div>
+        </section>
 
-    function showResult(docText) {
-        scenarioPanel.style.display = 'none';
-        resultPanel.style.display = 'block';
-        resultDocument.innerText = docText;
-    }
+        <!-- Section 3: Частые Документы -->
+        <section class="section">
+            <div class="section__header">
+                <h2 class="section__title">Частые Документы</h2>
+                <p class="section__subtitle">Популярные шаблоны документов для быстрого доступа.</p>
+            </div>
+            <div class="cards-grid cards-grid--3">
+                <!-- Card 5 -->
+                <div class="card">
+                    <div class="card__icon card__icon--blue">
+                        <!-- Simple receipt icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <rect x="5" y="3" width="16" height="20" rx="2" fill="#0d9488" opacity="0.12"/>
+                            <rect x="5" y="3" width="16" height="20" rx="2" stroke="#0d9488" stroke-width="1.5"/>
+                            <line x1="9" y1="9" x2="17" y2="9" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="9" y1="13" x2="17" y2="13" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="9" y1="17" x2="14" y2="17" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="16" cy="17" r="1.5" fill="#0d9488" opacity="0.4"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Простая расписка</h3>
+                    <p class="card__text">Простая расписка</p>
+                    <a href="#" class="card__btn card__btn--teal">Перейти</a>
+                </div>
 
-    newDocBtn.addEventListener('click', showSelector);
-    sendBtn.addEventListener('click', sendAnswer);
-    backBtn.addEventListener('click', showSelector);
-    resetBtn.addEventListener('click', async () => {
-        if (currentSessionId && currentScenarioType) {
-            await fetch(`${API_BASE}/${currentScenarioType}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: currentSessionId, answer: '' })
-            });
-        }
-        showSelector();
-    });
+                <!-- Card 6 -->
+                <div class="card">
+                    <div class="card__icon card__icon--orange">
+                        <!-- Claim to counterparty icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <rect x="5" y="3" width="16" height="20" rx="2" fill="#ea580c" opacity="0.1"/>
+                            <rect x="5" y="3" width="16" height="20" rx="2" stroke="#ea580c" stroke-width="1.5"/>
+                            <polygon points="13,7 16,11 10,11" fill="#ea580c" opacity="0.5"/>
+                            <line x1="13" y1="13" x2="13" y2="17" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="9" y1="19" x2="17" y2="19" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Претензия контрагенту</h3>
+                    <p class="card__text">Претензии для досудебного урегулирования</p>
+                    <a href="#" class="card__btn card__btn--teal">Перейти</a>
+                </div>
 
-    printBtn.addEventListener('click', () => window.print());
-    saveBtn.addEventListener('click', () => {
-        const text = resultDocument.innerText;
-        if (!text) return;
-        const blob = new Blob([text], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${currentScenarioType || 'document'}.txt`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-    });
+                <!-- Card 7 -->
+                <div class="card">
+                    <div class="card__icon card__icon--shield">
+                        <!-- Complaint to Rospotrebnadzor icon -->
+                        <svg viewBox="0 0 26 26" fill="none">
+                            <path d="M13 3L5 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6L13 3z" fill="#0d9488" opacity="0.12"/>
+                            <path d="M13 3L5 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6L13 3z" stroke="#0d9488" stroke-width="1.5" stroke-linejoin="round"/>
+                            <line x1="13" y1="9" x2="13" y2="15" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="13" cy="18" r="1" fill="#0d9488" opacity="0.6"/>
+                        </svg>
+                    </div>
+                    <h3 class="card__title">Жалоба в Роспотребнадзор</h3>
+                    <p class="card__text">Защита прав потребителей</p>
+                    <a href="#" class="card__btn card__btn--teal">Перейти</a>
+                </div>
+            </div>
+        </section>
+    </main>
 
-    document.getElementById('scrollToDocs').addEventListener('click', () => {
-        document.getElementById('scenariosContainer').scrollIntoView({ behavior: 'smooth' });
-    });
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <p>© 2026 <a href="#">ДокОбразец</a> — Все права защищены.</p>
+    </footer>
 
-    document.querySelectorAll('.category-card').forEach(card => {
-        card.addEventListener('click', () => {
-            document.getElementById('scenariosContainer').scrollIntoView({ behavior: 'smooth' });
-        });
-    });
-
-    renderDocs();
-    showSelector();
-</script>
 </body>
 </html>
