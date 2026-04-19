@@ -3,3 +3,4 @@ uvicorn
 aiohttp
 filelock
 python-dotenv
+python-docx

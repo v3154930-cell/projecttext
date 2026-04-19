@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, HTMLResponse
@@ -17,6 +18,8 @@ from scenarios.claim_marketplace_buyer import ClaimMarketplaceBuyerScenario
 
 app = FastAPI()
 
+PORT = int(os.getenv("PORT", "8000"))
+
 BASE_DIR = Path(__file__).resolve().parent
 
 # Подключаем static файлы если папка существует
@@ -32,10 +35,10 @@ async def root():
         return HTMLResponse(index_path.read_text(encoding="utf-8"))
     return HTMLResponse("<html><body><h1>ProjectText</h1><p>index.html not found</p></body></html>")
 
-# Настройка CORS - разрешаем все источники
+# Настройка CORS - разрешаем docobrazec.ru и все источники для разработки
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://docobrazec.ru", "http://docobrazec.ru", "http://localhost", "http://localhost:3000", "http://127.0.0.1", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -242,15 +245,18 @@ def generate_docx(document_text: str) -> bytes:
     buffer.seek(0)
     return buffer.getvalue()
 
+from fastapi.responses import StreamingResponse
+import io
+
 @app.post("/download-docx")
 def download_docx(request: DocxRequest):
     """Скачивание документа в формате DOCX."""
     docx_bytes = generate_docx(request.text)
     filename = generate_docx_filename(request.scenario_type, request.collected_data)
-    return Response(
-        content=docx_bytes,
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     )
 
 def _make_key(session_id: str, scenario_type: str) -> str:
@@ -406,4 +412,4 @@ def receipt_advanced(request: ScenarioRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
