@@ -575,6 +575,45 @@
             cursor: not-allowed;
         }
 
+        .choice-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 16px 0;
+        }
+        .choice-btn {
+            background: var(--teal-50);
+            border: 2px solid var(--teal-200);
+            color: var(--teal-700);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .choice-btn:hover {
+            background: var(--teal-100);
+            border-color: var(--teal-400);
+            transform: scale(1.1);
+        }
+
+        .btn-danger {
+            background: var(--red-500);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 12px;
+        }
+        .btn-danger:hover {
+            background: var(--red-600);
+        }
+
         /* ===== RESULT PANEL ===== */
         .result-panel {
             display: none;
@@ -615,20 +654,50 @@
             flex-wrap: wrap;
         }
 
-        .btn-result {
-            background: var(--teal-600);
-            color: var(--white);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
         .btn-result:hover {
             background: var(--teal-700);
+        }
+
+        /* ===== LEGAL INFO BLOCK ===== */
+        .legal-info {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .legal-info__title {
+            font-weight: 700;
+            color: #0369a1;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .legal-info__list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .legal-info__list li {
+            padding: 4px 0;
+            color: #075985;
+        }
+
+        .legal-info__list li::before {
+            content: "📜 ";
+        }
+
+        .disclaimer {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #92400e;
+            font-style: italic;
         }
 
         /* ===== FOOTER ===== */
@@ -815,9 +884,18 @@
             </div>
             <div id="questionArea" class="question-area">Вопрос будет здесь</div>
             <div class="answer-area">
-                <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ...">
+                <input type="text" id="answerInput" class="answer-input" placeholder="Введите ответ..." autocomplete="off">
                 <button id="sendBtn" class="btn-send">Отправить</button>
             </div>
+            <!-- Choice buttons for 1/2 selection -->
+            <div id="choiceButtons" class="choice-buttons" style="display:none;">
+                <button class="choice-btn" data-choice="1">1</button>
+                <button class="choice-btn" data-choice="2">2</button>
+            </div>
+            <!-- Skip button for optional fields -->
+            <button id="skipBtn" class="btn-secondary" style="display:none;">Пропустить</button>
+            <!-- Clear all data -->
+            <button id="clearAllBtn" class="btn-danger" style="display:none;">Стереть все данные</button>
         </div>
 
         <!-- Result Panel -->
@@ -829,6 +907,12 @@
                 <button id="saveBtn" class="btn-result">Сохранить</button>
                 <button id="newDocBtn" class="btn-result">Новый документ</button>
             </div>
+            <!-- Legal Info Block -->
+            <div id="legalInfo" class="legal-info" style="display:none;">
+                <div class="legal-info__title">Правовые основания:</div>
+                <ul id="legalList" class="legal-info__list"></ul>
+                <div class="disclaimer">Информация носит справочный характер. Для сложных ситуаций обратитесь к юристу.</div>
+            </div>
         </div>
 
     </main>
@@ -839,7 +923,7 @@
     </footer>
 
     <script>
-        window.API_URL = 'https://docobrazec-api.onrender.com';
+        window.API_URL = 'https://docobrazec.ru';
         const API_BASE = window.API_URL + '/api/scenario';
 
         const docs = {
@@ -851,11 +935,86 @@
             claims: [
                 { type: "claim_marketplace_buyer", name: "Претензия на маркетплейс", desc: "Ozon, WB, Яндекс Маркет", icon: "🛒", cat: "claims" },
                 { type: "claim_universal", name: "Универсальная претензия", desc: "Любому получателю", icon: "⚖️", cat: "claims" },
-                { type: "claim_bank_block", name: "Претензия в банк", desc: "ФЗ-115 блокировка счёта", icon: "🏦", cat: "claims" }
+                { type: "claim_bank_block", name: "Претензия в банк", desc: "ФЗ-115 блокировка счёта", icon: "🏦", cat: "claims" },
+                { type: "seller_claim_dimensions", name: "Штраф за габариты", desc: "Продавец → маркетплейс", icon: "📏", cat: "claims" },
+                { type: "seller_claim_cancellation", name: "Штраф за отмену заказа", desc: "Продавец → маркетплейс", icon: "❌", cat: "claims" },
+                { type: "seller_claim_loss", name: "Списание товара", desc: "Продавец → маркетплейс", icon: "📦", cat: "claims" },
+                { type: "seller_claim_blocking", name: "Блокировка карточек", desc: "Продавец → маркетплейс", icon: "🔒", cat: "claims" },
+                { type: "seller_claim_penalty_reduction", name: "Снижение штрафа", desc: "Ст. 333 ГК РФ", icon: "📉", cat: "claims" }
             ],
             complaints: [
                 { type: "complaint_rospotrebnadzor", name: "Жалоба в Роспотребнадзор", desc: "Защита прав потребителей", icon: "🛡️", cat: "complaints" },
                 { type: "complaint_prosecutor", name: "Жалоба в прокуратуру", desc: "Надзор за правами", icon: "⚡", cat: "complaints" }
+            ]
+        };
+
+        // Legal references for each scenario
+        const legalReferences = {
+            receipt_simple: [
+                "Ст. 807 ГК ��Ф — Договор займа",
+                "Ст. 808 ГК РФ — Форма договора займа",
+                "Ст. 810 ГК РФ — Обязанность заемщика возвратить сумму займа"
+            ],
+            receipt_advanced: [
+                "Ст. 807 ГК РФ — Договор займа",
+                "Ст. 808 ГК РФ — Форма договора займа",
+                "Ст. 809 ГК РФ — Проценты по договору займа",
+                "Ст. 810 ГК РФ — Обязанность заемщика",
+                "Ст. 395 ГК РФ — Ответственность за неисполнение"
+            ],
+            loan: [
+                "Ст. 807 ГК РФ — Договор займа",
+                "Ст. 808 ГК РФ — Форма договора",
+                "Ст. 809 ГК РФ — Проценты",
+                "Ст. 810 ГК РФ — Возврат суммы",
+                "Ст. 811 ГК РФ — Последствия",
+                "Ст. 395 ГК РФ — Ответственность",
+                "Ст. 330 ГК РФ — Неустойка"
+            ],
+            claim_marketplace_buyer: [
+                "Ст. 26.1 ЗоЗПП — Дистанционный способ продажи",
+                "Ст. 18 ЗоЗПП — Права потребителя при обнаружении недостатков",
+                "Ст. 23.1 ЗоЗПП — Нарушение срока доставки"
+            ],
+            claim_bank_block: [
+                "П. 10 ст. 7 ФЗ-115 — основания блокировки",
+                "П. 11 ст. 7 ФЗ-115 — порядок блокировки",
+                "П. 13.1.1 ст. 7 ФЗ-115 — обязанности банка",
+                "П. 14 ст. 7 ФЗ-115 — обжалование"
+            ],
+            claim_universal: [
+                "Ст. 1 ГК РФ — Основные начала",
+                "Ст. 10 ГК РФ — Не злоупотреблять правом",
+                "Ст. 421 ГК РФ — Свобод договора"
+            ],
+            seller_claim_dimensions: [
+                "Ст. 20 ГК РФ — Не злоупотреблять правом",
+                "Внутренние правила маркетплейсов"
+            ],
+            seller_claim_cancellation: [
+                "Ст. 421 ГК РФ — Свобод договора",
+                "Внутренние правила маркетплейсов"
+            ],
+            seller_claim_loss: [
+                "Ст. 421 ГК РФ — Свобод договора",
+                "Ст. 393 ГК РФ — Истребование имущества"
+            ],
+            seller_claim_blocking: [
+                "Ст. 20 ГК РФ — Не злоупотреблять правом",
+                "Внутренние правила маркетплейсов"
+            ],
+            seller_claim_penalty_reduction: [
+                "Ст. 15 ГК РФ — Законность правонарушений",
+                "Ст. 333 ГК РФ — Снижение размера ущерба"
+            ],
+            complaint_rospotrebnadzor: [
+                "Ст. 18 ЗоЗПП — Права потребителей",
+                "Ст. 23.1 ЗоЗПП — Нарушение сроков",
+                "Ст. 26.1 ЗоЗПП — Дистанционная продажа"
+            ],
+            complaint_prosecutor: [
+                "Ст. 10 ФЗ «О прокуратуре РФ» — Рассмотрение обращений",
+                "Ст. 21 ФЗ «О прокуратуре» — Полномочия"
             ]
         };
 
@@ -917,6 +1076,8 @@
                     questionArea.innerText = data.question;
                     answerInput.disabled = false;
                     sendBtn.disabled = false;
+                    answerInput.focus();
+                    updateOptionalFields(data);
                 }
             } catch (err) {
                 questionArea.innerText = 'Ошибка загрузки. Проверьте сервер.';
@@ -943,6 +1104,8 @@
                     answerInput.value = '';
                     answerInput.disabled = false;
                     sendBtn.disabled = false;
+                    answerInput.focus();
+                    updateOptionalFields(data);
                 }
             } catch (err) {
                 questionArea.innerText = 'Ошибка. Попробуйте ещё раз.';
@@ -955,6 +1118,17 @@
             scenarioPanel.classList.remove('active');
             resultPanel.classList.add('active');
             resultDocument.innerText = docText;
+            
+            // Show legal info block
+            const legalInfo = document.getElementById('legalInfo');
+            const legalList = document.getElementById('legalList');
+            const refs = legalReferences[currentScenarioType];
+            if (refs && refs.length > 0) {
+                legalList.innerHTML = refs.map(r => `<li>${r}</li>`).join('');
+                legalInfo.style.display = 'block';
+            } else {
+                legalInfo.style.display = 'none';
+            }
         }
 
         function showDocs() {
@@ -986,6 +1160,66 @@
         answerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAnswer(); });
         document.getElementById('backToDocsBtn').addEventListener('click', showDocs);
         document.getElementById('newDocBtn').addEventListener('click', showDocs);
+        
+        // Skip button
+        const skipBtn = document.getElementById('skipBtn');
+        skipBtn.addEventListener('click', async () => {
+            skipBtn.disabled = true;
+            try {
+                const resp = await fetch(`${API_BASE}/${currentScenarioType}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId, answer: '' })
+                });
+                const data = await resp.json();
+                if (data.is_complete) {
+                    showResult(data.document);
+                } else {
+                    questionArea.innerText = data.question;
+                    answerInput.value = '';
+                    answerInput.focus();
+                    updateOptionalFields(data);
+                }
+            } catch (err) {
+                questionArea.innerText = 'Ошибка';
+            }
+        });
+        
+        // Clear all data button
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        clearAllBtn.addEventListener('click', async () => {
+            if (!currentSessionId) return;
+            try {
+                await fetch(`/api/session/${currentSessionId}/reset`, { method: 'POST' });
+                currentSessionId = '';
+                initScenario();
+            } catch (err) {
+                console.error('Clear error:', err);
+            }
+        });
+        
+        // Choice buttons (1/2)
+        document.querySelectorAll('.choice-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const choice = btn.dataset.choice;
+                answerInput.value = choice;
+                await sendAnswer();
+            });
+        });
+        
+        // Update optional/choice fields visibility
+        function updateOptionalFields(data) {
+            skipBtn.style.display = data.optional ? 'block' : 'none';
+            clearAllBtn.style.display = currentSessionId ? 'block' : 'none';
+            
+            // Show choice buttons if field_type is 'choice'
+            const choiceDiv = document.getElementById('choiceButtons');
+            if (data.field_type === 'choice') {
+                choiceDiv.style.display = 'flex';
+            } else {
+                choiceDiv.style.display = 'none';
+            }
+        }
         
         document.getElementById('printBtn').addEventListener('click', () => window.print());
         document.getElementById('saveBtn').addEventListener('click', () => {

@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
@@ -15,6 +15,11 @@ from scenarios.receipt_simple import ReceiptSimpleScenario
 from scenarios.receipt_advanced import ReceiptAdvancedScenario
 from scenarios.loan import LoanScenario
 from scenarios.claim_marketplace_buyer import ClaimMarketplaceBuyerScenario
+from scenarios.seller_claim_dimensions import SellerClaimDimensionsScenario
+from scenarios.seller_claim_cancellation import SellerClaimCancellationScenario
+from scenarios.seller_claim_loss import SellerClaimLossScenario
+from scenarios.seller_claim_blocking import SellerClaimBlockingScenario
+from scenarios.seller_claim_penalty_reduction import SellerClaimPenaltyReductionScenario
 
 app = FastAPI()
 
@@ -52,7 +57,12 @@ template_map = {
     "receipt_simple": "templates/receipt_simple.txt",
     "receipt_advanced": "templates/receipt_advanced.txt",
     "loan": "templates/loan.txt",
-    "claim_marketplace_buyer": "templates/claim_marketplace_buyer.txt"
+    "claim_marketplace_buyer": "templates/claim_marketplace_buyer.txt",
+    "seller_claim_dimensions": "templates/seller_claim_dimensions.txt",
+    "seller_claim_cancellation": "templates/seller_claim_cancellation.txt",
+    "seller_claim_loss": "templates/seller_claim_loss.txt",
+    "seller_claim_blocking": "templates/seller_claim_blocking.txt",
+    "seller_claim_penalty_reduction": "templates/seller_claim_penalty_reduction.txt"
 }
 
 class AgentResponse(BaseModel):
@@ -110,7 +120,12 @@ def generate_docx_filename(scenario_type: str = None, collected_data: dict = Non
         'loan': 'Договор_займа',
         'receipt_simple': 'Расписка_простая',
         'receipt_advanced': 'Расписка_расширенная',
-        'claim_marketplace_buyer': 'Претензия_маркетплейс'
+        'claim_marketplace_buyer': 'Претензия_маркетплейс',
+        'seller_claim_dimensions': 'Претензия_габариты',
+        'seller_claim_cancellation': 'Претензия_отмена',
+        'seller_claim_loss': 'Претензия_списание',
+        'seller_claim_blocking': 'Претензия_блокировка',
+        'seller_claim_penalty_reduction': 'Претензия_снижение_штрафа'
     }
     prefix = name_map.get(scenario_type, 'Документ') if scenario_type else 'Документ'
     
@@ -245,18 +260,16 @@ def generate_docx(document_text: str) -> bytes:
     buffer.seek(0)
     return buffer.getvalue()
 
-from fastapi.responses import StreamingResponse
-import io
-
 @app.post("/download-docx")
 def download_docx(request: DocxRequest):
     """Скачивание документа в формате DOCX."""
     docx_bytes = generate_docx(request.text)
     filename = generate_docx_filename(request.scenario_type, request.collected_data)
+    ascii_filename = "".join(c if ord(c) < 128 else "_" for c in filename)
     return StreamingResponse(
-        io.BytesIO(docx_bytes),
+        BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
+        headers={"Content-Disposition": f"attachment; filename={ascii_filename}"}
     )
 
 def _make_key(session_id: str, scenario_type: str) -> str:
@@ -278,6 +291,16 @@ def get_or_create_scenario(session_id: str = None, scenario_type: str = "receipt
             sessions[key] = LoanScenario()
         elif scenario_type == "claim_marketplace_buyer":
             sessions[key] = ClaimMarketplaceBuyerScenario()
+        elif scenario_type == "seller_claim_dimensions":
+            sessions[key] = SellerClaimDimensionsScenario()
+        elif scenario_type == "seller_claim_cancellation":
+            sessions[key] = SellerClaimCancellationScenario()
+        elif scenario_type == "seller_claim_loss":
+            sessions[key] = SellerClaimLossScenario()
+        elif scenario_type == "seller_claim_blocking":
+            sessions[key] = SellerClaimBlockingScenario()
+        elif scenario_type == "seller_claim_penalty_reduction":
+            sessions[key] = SellerClaimPenaltyReductionScenario()
         elif scenario_type == "claim_simple":
             # Заглушка для claim_simple - возвращаем None
             sessions[key] = None
